@@ -98,6 +98,8 @@ operations you can purform similar to their logstash equivallents that I will do
 
 h["name"] = "this is a test"  // add a field
 
+json.Unmarshal(h[key],&h)     // decode a json value for a key
+
 ```
 
 ### POST /target/_doc/
