@@ -26,6 +26,8 @@ Config is minimalist and currently few values defined. Will expand as needed.
 
 Defaults are defined in code. Values in egopipe.conf will override those.
 
+egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
+
 ```
 
 "target": "http://127.0.0.1:9200" (default)
@@ -77,7 +79,7 @@ filter {
 }
 output {
    pipe {
-      command => "your path to gopipe"
+      command => "/etc/logstash/conf.d/egopipe"
    }
 }
 
@@ -161,6 +163,8 @@ example doc: (json)
 add target config value (complete 03/12)
 
 add name config value (complete 03/12)
+
+config changes now installed //etc/logstash/conf.d (complete 03/15)
 
 assess comparison logstash plugins to go methods (README)
 
