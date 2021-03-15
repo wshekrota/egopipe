@@ -53,12 +53,7 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ---
 
-Testing.. egopipe is functional and tests out but production use is blocked on functional difficulties.
-1. Due to propriety of input interface from filebeat ie Lumberjack my usage model has logstash launching my pipe.
-2. Using pipe plugin depends a Java pipe process that appears to be failing.
-
-Solving either of these would be a way forward. In the case of #1 writing a lumberjack socketedd interface.
-In the case of #2 figuring out why the pipe fails and if there is some way in config to get around it or with encoding.
+Functional - currently in testing
 
 ---
 
@@ -90,6 +85,20 @@ can decode and process that doc. Decoded we have a map which is very easy to man
 When done we encode the map back to json and ultimately we  put the annotated doc in an elastic index by way of an API call. 
 
 ---
+
+## The Nitty Gritty (or how do I write the filter section in go)
+
+```
+
+The logstash pipe filter section used to just be Ruby like code. Now the filter section or stage2 of egopipe may be written in go.
+
+Of course when done egopipe must be compiled then copied to '/etc/logstash/conf.d'. The doc object is the map 'h' so there will be many
+
+operations you can purform similar to their logstash equivallents that I will document below.
+
+h["name"] = "this is a test"  // add a field
+
+```
 
 ### POST /target/_doc/
 
