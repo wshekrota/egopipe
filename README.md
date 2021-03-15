@@ -1,7 +1,7 @@
 # egopipe
 A minimalist solution for logstash complexity in Elastic
 
-## Conventional ETL minimalist pipeline written in Go for Elasticstack
+# Conventional ETL minimalist pipeline written in Go for Elasticstack
 
 If you have ever used Elasticstack the wonderful analytics suite from Elastic you quickly realize that the 
 ingestion engine logstash is its great short coming. On the good side it has so many options. On the bad side
@@ -17,13 +17,46 @@ fact was that filebeat has a dependency on logstash input. If you tried to write
 understand the complexity of whatever encode/decode (lumberjack) happens on that socketed interface between
 filebeat and logstash.
 
+
+## config file management
+
+---
+
+Config is minimalist and currently few values defined. Will expand as needed.
+
+Defaults are defined in code. Values in egopipe.conf will override those.
+
+```
+
+"target": "http://127.0.0.1:9200" (default)
+
+"name": "egopipe" (default)
+
+```
+
+---
+
+
 ## dependencies:
 
 ---
 
-    filebeat as input (queuing) recommend spool, default is memory 4096. 
-    because logstash pipe launches egopipe localhost:9200 is being assumed for the API communcation. I'll probably 
-    add an environment variable later to conf for elasticcsearch on another host.
+    - filebeat as input (queuing) recommend spool, default is memory 4096. 
+    - egopipe config file should be copied to /etc/logstash/conf.d to claim elastic host target.
+    - logstash jvm.options config in /etc/logstash should have upper memory set as in ..Xmx2g
+
+---
+
+## Status
+
+---
+
+Testing.. egopipe is functional and tests out but production use is blocked on functional difficulties.
+1. Due to propriety of input interface from filebeat ie Lumberjack my usage model has logstash launching my pipe.
+2. Using pipe plugin depends a Java pipe process that appears to be failing.
+
+Solving either of these would be a way forward. In the case of #1 writing a lumberjack socketedd interface.
+In the case of #2 figuring out why the pipe fails and if there is some way in config to get around it or with encoding.
 
 ---
 
@@ -80,6 +113,7 @@ Errors:
 
 ```
 
+
 ## logstash to egopipe
 
 ---
@@ -93,16 +127,17 @@ input(socket) -> filter(null) -> output(pipe) | **input(stdin) -> filter(your go
 * read stdin
 * decode that json
 
-**stage2** (called with map)
+**stage2** (called w/ map)
 
 * write user pipeline
 
-**stage3** (called with map)
+**stage3** (called w/ ref to stage2 map)
 
 * encode back to json
 * PUT API call (write to elastic index)
 
 ---
+
 
 ## Testing egopipe
 
@@ -117,3 +152,18 @@ example doc: (json)
 
 {"@timestamp":"2021-03-10T00:58:21.976Z","tags":["beats_input_codec_plain_applied"],"ecs":{"version":"1.4.0"},"agent":{"hostname":"gitlab","id":"3fc83c01-53ee-4a26-b33a-fe2ec2e4dab6","type":"filebeat","version":"7.6.2","ephemeral_id":"55da0cbe-abff-4ec2-9820-624ceff143c1"},"input":{"type":"log"},"log":{"offset":0,"file":{"path":"/var/log/walt/walt.log"}},"host":{"architecture":"x86_64","name":"gitlab","containerized":false,"os":{"kernel":"4.15.0-99-generic","name":"Ubuntu","version":"18.04.4 LTS (Bionic Beaver)","codename":"bionic","platform":"ubuntu","family":"debian"},"hostname":"gitlab","id":"f1823a3617ff4004baa550a0ae8408b6"},"message":"yessir","@version":"1"}
 ```
+
+
+## TODO list
+
+---
+
+add target config value (complete 03/12)
+
+add name config value (complete 03/12)
+
+assess comparison logstash plugins to go methods (README)
+
+evaluate debug function output
+
+---

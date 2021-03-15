@@ -24,7 +24,7 @@ import "strings"
 func main() {
 
     // Read config options
-    //
+    // 
 
     p, _ := getConf()
 
@@ -32,25 +32,29 @@ func main() {
 	//
 
 	var Hash map[string]interface{}
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-
-		if err := json.Unmarshal([]byte(scanner.Text()), &Hash); err != nil {
+//	scanner := bufio.NewScanner(os.Stdin)
+    reader := bufio.NewReader(os.Stdin)
+  
+	for {
+        text, _ := (*reader).ReadString('\n')
+        if err := json.Unmarshal([]byte(text), &Hash); err != nil {
+//		if err := json.Unmarshal([]byte(scanner.Text()), &Hash); err != nil {
 			break
 		}
-		log.Println("xstage1 field message=", Hash["message"])
+//		log.Println("xstage1 field message=", Hash["message"])
+
         ds := strings.SplitN(Hash["@timestamp"].(string),"T",2)[0]
-        log.Println("xramone",ds)
+        ds = strings.Replace(ds, "-", ".", 2)
+
 		c := make(chan *map[string]interface{})
 		go yourpipecode(Hash, c)            // stage 2
 		pstg2map := <-c                     // return pointer to internal map
-		log.Println("xstage2", (*pstg2map)["test"])
-		s := make(chan string)
-		r := make(chan string)
-		log.Println("hello",ds, p.Target,p.Name, pstg2map, s, r)    // stage 3
-		go output(ds, p.Target,p.Name, pstg2map, s, r)    // stage 3
-		log.Println("stage3 index write request field json=", <-s)
-		log.Println("response from POST", <-r)
+//		s := make(chan string)
+		r := make(chan []byte)
+//		log.Println("hello",ds, p.Target,p.Name)    // stage 3
+		go output(ds, p.Target,p.Name, pstg2map, r)    // stage 3
+//		log.Println("stage3 index write request field json=", <-s)
+		log.Println("response from POST", string(<-r))
 
 	}
 
@@ -66,18 +70,15 @@ type Config struct {
 func getConf() (*Config, error) {
  
     conf := &Config{Target:"http://127.0.0.1:9200",Name:"egopipe"}
-//    fmt.Println("Defaults",conf.Target,conf.Name)
-    file, err := ioutil.ReadFile("egopipe.conf")
-//    fmt.Println("read",string(file))
+    file, err := ioutil.ReadFile("/etc/logstash/conf.d/egopipe.conf")
     if err != nil {
         log.Printf("my.conf.Get err   #%v ", err)
-        return nil, err
+        return conf, err
     }
     err = json.Unmarshal(file, conf)
-    fmt.Println("decode",conf,err)
     if err != nil {
         log.Fatalf("Unmarshal error: %v", err)
-        return nil, err
+        return conf, err
     }
     return conf, nil
 }
@@ -107,24 +108,22 @@ func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 
  */
 
-func output(dateof string, target string, name string, hp *map[string]interface{}, s chan string, r chan string) {
+func output(dateof string, target string, name string, hp *map[string]interface{}, r chan []byte) {
 
-		log.Println("json garbage")
 	jbuf, err := json.Marshal(hp)
-    s <- string(jbuf)
 	responseBody := bytes.NewBuffer(jbuf)
-//	url := fmt.Sprintf("%s/log-%s-%s/_doc/", target, name, dateof)
-resp, err := http.Post("http://192.168.1.43:9200/log-tester-2021.03.08/_doc/", "application/json", responseBody)
-//	resp, err := http.Post(url, "application/json", responseBody)
+	url := fmt.Sprintf("%s/log-%s-%s/_doc/", target, name, dateof)
+//	log.Println("url=",(*hp)["message"],url)
+// resp, err := http.Post("http://192.168.1.43:9200/log-tester-2021.03.08/_doc/", "application/json", responseBody)
+	resp, err := http.Post(url, "application/json", responseBody)
 	if err != nil {
 		log.Println("HTTP POST error writing Elastic index. error=", err)
 	} else {
-	    log.Println("POST response=",resp)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		r <- string(body)
+		r <- body
 	}
 }
