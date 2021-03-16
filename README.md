@@ -1,4 +1,4 @@
-# egopipe
+9# egopipe
 A minimalist solution for logstash complexity in Elastic
 
 # Conventional ETL minimalist pipeline written in Go for Elasticstack
@@ -98,7 +98,9 @@ operations you can purform similar to their logstash equivallents that I will do
 
 h["name"] = "this is a test"  // add a field
 
-json.Unmarshal(h[key],&h)     // decode a json value for a key
+delete(h,"key")               // delete a field
+
+json.Unmarshal([]byte(h[key].(string)),&h)     // decode a json value for a key
 
 ```
 
@@ -129,6 +131,7 @@ Errors:
 
 ## logstash to egopipe
 
+![flowchart](https://github.com/wshekrota/egopipe/egopipe.png)
 ---
 
 input(socket) -> filter(null) -> output(pipe) | **input(stdin) -> filter(your go code) -> output(write index)**
@@ -180,5 +183,7 @@ config changes now installed //etc/logstash/conf.d (complete 03/15)
 assess comparison logstash plugins to go methods (README)
 
 evaluate debug function output
+
+security
 
 ---

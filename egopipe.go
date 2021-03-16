@@ -94,8 +94,13 @@ func getConf() (*Config, error) {
 func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 
     // h is the hash representing your docs
-	h["test"] = 31415    // example field add
-	
+//	h["test"] = 31415    // example field add
+//  delete(h,"key")      // delete field
+//  _, found := h["key"] // true or false
+
+//    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
+//    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
+
 	c <- &h  // Although you write code here this line is required 
 }
 
