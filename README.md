@@ -3,6 +3,12 @@ A minimalist solution for logstash complexity in Elastic
 
 # Conventional ETL minimalist pipeline written in Go for Elasticstack
 
+<<<<<<< HEAD
+Format: ![egopipe logo](https://www.google.com/imgres?imgurl=https%3A%2F%2Fgolangforall.com%2Fassets%2Ftube2.svg&imgrefurl=https%3A%2F%2Fgolangforall.com%2Fen%2Fgopher-drawings.html&tbnid=OMB0gw9yicfL9M&vet=10CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE..i&docid=Ges437lBH6SG0M&w=800&h=519&q=golang%20gopher%20graphics&client=ubuntu&ved=0CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE)
+=======
+![logo](https://github.com/wshekrota/egopipe/blob/main/logo.png)
+>>>>>>> 8a61ab037ece16c0f27c55646105c6dcddcbb88f
+
 If you have ever used Elasticstack the wonderful analytics suite from Elastic you quickly realize that the 
 ingestion engine logstash is its great short coming. On the good side it has so many options. On the bad side
 with great complexity comes difficulty debugging the various settings. Many times we all need a simplistic 
@@ -131,7 +137,8 @@ Errors:
 
 ## logstash to egopipe
 
-![flowchart](https://github.com/wshekrota/egopipe/egopipe.png)
+![flowchart](https://github.com/wshekrota/egopipe/blob/main/egopipe.png)
+
 ---
 
 input(socket) -> filter(null) -> output(pipe) | **input(stdin) -> filter(your go code) -> output(write index)**
