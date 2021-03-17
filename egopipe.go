@@ -13,7 +13,9 @@ import "strings"
 
 /* 
    Author: Walt Shekrota wshekrota@icloud.com
+   Name: egopipe
 
+   Description:
    Define a pipeline with 3 stages.
    Launch it from logstash via pipe output plugin.
    ETL accepts input/transforms/indexes
@@ -93,10 +95,13 @@ func getConf() (*Config, error) {
 
 func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 
-    // h is the hash representing your docs
-//	h["test"] = 31415    // example field add
-//  delete(h,"key")      // delete field
-//  _, found := h["key"] // true or false
+// h is the hash representing your docs
+// keys are fields
+// value is interface{} and must be asserted
+1
+//	  h["test"] = 31415    // example field add
+//    delete(h,"key")      // delete field
+//    _, found := h["key"] // true or false does this field exist?
 
 //    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
 //    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }

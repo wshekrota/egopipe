@@ -1,13 +1,12 @@
-9# egopipe
+# egopipe
+
 A minimalist solution for logstash complexity in Elastic
 
 # Conventional ETL minimalist pipeline written in Go for Elasticstack
 
-<<<<<<< HEAD
 Format: ![egopipe logo](https://www.google.com/imgres?imgurl=https%3A%2F%2Fgolangforall.com%2Fassets%2Ftube2.svg&imgrefurl=https%3A%2F%2Fgolangforall.com%2Fen%2Fgopher-drawings.html&tbnid=OMB0gw9yicfL9M&vet=10CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE..i&docid=Ges437lBH6SG0M&w=800&h=519&q=golang%20gopher%20graphics&client=ubuntu&ved=0CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE)
-=======
+
 ![logo](https://github.com/wshekrota/egopipe/blob/main/logo.png)
->>>>>>> 8a61ab037ece16c0f27c55646105c6dcddcbb88f
 
 If you have ever used Elasticstack the wonderful analytics suite from Elastic you quickly realize that the 
 ingestion engine logstash is its great short coming. On the good side it has so many options. On the bad side
@@ -90,7 +89,6 @@ On the output side of logstash what we get is JSON for the docs traveling throug
 can decode and process that doc. Decoded we have a map which is very easy to manipulate in golang.
 When done we encode the map back to json and ultimately we  put the annotated doc in an elastic index by way of an API call. 
 
----
 
 ## The Nitty Gritty (or how do I write the filter section in go)
 
@@ -108,11 +106,17 @@ delete(h,"key")               // delete a field
 
 json.Unmarshal([]byte(h[key].(string)),&h)     // decode a json value for a key
 
+                              // this processes top level json prefixed by non json
+idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
+if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
+
 ```
 
-### POST /target/_doc/
+## This is how output stage updates Elastic index
 
----
+```
+
+* POST /target/_doc/ *
 
 Request body will carry the JSON.
 
@@ -120,7 +124,9 @@ Entire pipe is golang so transform or filter stage is familiar.
 
 ```
 
-Errors:
+## These are possible errors that willl need documenting.
+
+```
 
     JSON decode
        good: nil
@@ -140,8 +146,6 @@ Errors:
 ![flowchart](https://github.com/wshekrota/egopipe/blob/main/egopipe.png)
 
 ---
-
-input(socket) -> filter(null) -> output(pipe) | **input(stdin) -> filter(your go code) -> output(write index)**
 
 **egopipe** will:
 
