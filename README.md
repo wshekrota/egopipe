@@ -124,19 +124,25 @@ Entire pipe is golang so transform or filter stage is familiar.
 
 ```
 
-## These are possible errors that willl need documenting.
+## Main errors on input or output stream
 
 ```
 
-    JSON decode
+    Config
+       good: use config
+       bad: no file continue default
+       bad: file decode error SystemExit
+    JSON decode stream
        good: nil
-       bad: numeric error
-    JSON encode
+       bad: SystemExit
+    JSON encode stream
        good: nil
-       bad: numeric error
+       bad: SystemExit
     POST call
+       good:
        Response body 
        How to evaluate _shards or determine success.
+       bad: SystemExit
 
 ```
 
