@@ -85,6 +85,7 @@ func getConf() (*Config, error) {
 
 	if err != nil { // soft error
 		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
+		return conf, err
 	} else {
 		err = json.Unmarshal(file, conf)
 		if err != nil {
