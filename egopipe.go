@@ -23,8 +23,8 @@ import "strings"
 */
 
 type Result struct {
-    Message string
-    Error error
+	Message string
+	Error   error
 }
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 
 	p, err := getConf()
 
-    if err != nil {
+	if err != nil {
 		log.Fatalf("Egopipe config Unmarshal error: %v", err)
 	}
 
@@ -43,17 +43,21 @@ func main() {
 
 	var Hash map[string]interface{}
 	c := make(chan *map[string]interface{})
-	r := make(chan []byte)
+	r := make(chan Result)
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
+	    // Read from pipe
+	    //
 		slice, _ := (*reader).ReadBytes('\n')
-		log.Println(">>line", string(slice))
+
 		if err := json.Unmarshal(slice, &Hash); err != nil {
-			log.Fatalf("Egopipe input Unmarshal error: %v", err)
+			fmt.Printf("Egopipe input Unmarshal error: %v", err)
 		}
 
+		// Save datestamp for output stage
+		//
 		ds := strings.SplitN(Hash["@timestamp"].(string), "T", 2)[0]
 		ds = strings.Replace(ds, "-", ".", 2)
 
@@ -62,7 +66,7 @@ func main() {
 		pstg2map := <-c // return pointer to internal map
 
 		go output(ds, p, pstg2map, r) // stage 3
-		log.Println("response from POST", string(<-r))
+		log.Println("response from output", (<-r).Message)
 
 	}
 
@@ -79,8 +83,8 @@ func getConf() (*Config, error) {
 
 	file, err := ioutil.ReadFile("/etc/logstash/conf.d/egopipe.conf")
 
-	if err != nil {    // soft error
-		log.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
+	if err != nil { // soft error
+		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
 	} else {
 		err = json.Unmarshal(file, conf)
 		if err != nil {
@@ -120,23 +124,26 @@ func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 
 */
 
-func output(dateof string, c *Config, hp *map[string]interface{}, r chan []byte) {
+func output(dateof string, c *Config, hp *map[string]interface{}, r chan Result) {
 
+	var s Result
 	jbuf, err := json.Marshal(hp)
 	if err != nil {
-		log.Fatalf("Egopipe input Marshal error: %v", err)
-	}
-	responseBody := bytes.NewBuffer(jbuf)
-	url := fmt.Sprintf("%s/log-%s-%s/_doc/", c.Target, c.Name, dateof)
-	resp, err := http.Post(url, "application/json", responseBody)
-	if err != nil {
-		log.Fatalf("Egopipe output POST error writing Elastic index. error=", err)
+		s.Message = fmt.Sprintf("Egopipe input Marshal error: %v", err)
+		s.Error = err
 	} else {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		responseBody := bytes.NewBuffer(jbuf)
+		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c.Target, c.Name, dateof)
+		resp, err := http.Post(url, "application/json", responseBody)
 		if err != nil {
-			log.Fatalln(err)
+			s.Message = fmt.Sprintf("Egopipe output POST error #s writing Elastic index. error: %v", resp.Status, err)
+			s.Error = err
+		} else {
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			s.Message = string(body)
+			s.Error = err
 		}
-		r <- body
 	}
+	r <- s
 }
