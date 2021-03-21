@@ -9,6 +9,7 @@ import "encoding/json"
 import "bytes"
 import "fmt"
 import "strings"
+import "time"
 
 /*
    Author: Walt Shekrota wshekrota@icloud.com
@@ -27,6 +28,14 @@ type Result struct {
 	Error   error
 }
 
+type Metrics struct {
+    Bytes int
+    Docs int
+    Fields map[int]int
+    Elapsed time.Duration
+}
+
+
 func main() {
 
 	// Read config options
@@ -38,12 +47,14 @@ func main() {
 		log.Fatalf("Egopipe config Unmarshal error: %v", err)
 	}
 
-	// Read json from stdin passed from null logstash pipe
-	//
-
 	var Hash map[string]interface{}
 	c := make(chan *map[string]interface{})
 	r := make(chan Result)
+    totals := Metrics{}
+    totals.Fields = make(map[int]int)
+    
+	// Read json from stdin passed from null logstash pipe
+	//
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -55,6 +66,7 @@ func main() {
 		if err := json.Unmarshal(slice, &Hash); err != nil {
 			fmt.Printf("Egopipe input Unmarshal error: %v", err)
 		}
+        now := time.Now().UTC()
 
 		// Save datestamp for output stage
 		//
@@ -66,16 +78,29 @@ func main() {
 		pstg2map := <-c // return pointer to internal map
 
 		go output(ds, p, pstg2map, r) // stage 3
-		log.Println("response from output", (<-r).Message)
+		resp := <- r
+		log.Println("response from output", resp.Message, err)
+        if err != nil {
+           os.Exit(3)
+        }
 
+        totals.Elapsed = time.Since(now)
+        totals.Docs++
+        totals.Bytes+=len(resp.Message)
+        nfields := len(*pstg2map)
+    	(totals.Fields)[nfields]++
+
+        log.Println("metrics:",totals)
 	}
 
 }
+
 
 type Config struct {
 	Target string
 	Name   string
 }
+
 
 func getConf() (*Config, error) {
 
@@ -95,6 +120,7 @@ func getConf() (*Config, error) {
 	return conf, nil
 }
 
+
 /*
 
    stage 2
@@ -112,11 +138,12 @@ func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 	//    delete(h,"key")      // delete field
 	//    _, found := h["key"] // true or false does this field exist?
 
-	//    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
-	//    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
+//	    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
+//	    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
 
 	c <- &h // Although you write code here this line is required
 }
+
 
 /*
 

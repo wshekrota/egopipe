@@ -187,6 +187,17 @@ example doc: (json)
 ```
 
 
+## Metrics
+
+```
+So far trivial fields
+Elapsed - rough estimate time after read/decode to write index success
+Bytes - total bytes transit
+Docs - total doc count
+Fields - map is count per field count in docs this gives you a rough idea what is coming in and what is done in the filter.
+```
+
+
 ## TODO list
 
 ---
@@ -199,8 +210,13 @@ config changes now installed //etc/logstash/conf.d (complete 03/15)
 
 assess comparison logstash plugins to go methods (README)
 
+metrics What kind?
+
+metrics wants perhaps an end to end traversal time
+
 evaluate debug function output
 
 security
 
+test what happens in queue backup
 ---
