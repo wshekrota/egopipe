@@ -94,11 +94,14 @@ When done we encode the map back to json and ultimately we  put the annotated do
 
 ```
 
-The logstash pipe filter section used to just be Ruby like code. Now the filter section or stage2 of egopipe may be written in go.
+The logstash pipe filter section used to just be Ruby like code. Now the filter section or stage2 
 
-Of course when done egopipe must be compiled then copied to '/etc/logstash/conf.d'. The doc object is the map 'h' so there will be many
+of egopipe may be written in go. Of course when done egopipe must be compiled then copied to 
 
-operations you can purform similar to their logstash equivallents that I will document below.
+'/etc/logstash/conf.d'. The doc object is the map 'h' so there will be many operations you can 
+
+perform similar to their logstash equivalents that I will document below.
+
 
 h["name"] = "this is a test"  // add a field
 
@@ -114,7 +117,7 @@ if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
 
 ## This is how output stage updates Elastic index
 
-```
+---
 
 * POST /target/_doc/ *
 
@@ -122,7 +125,7 @@ Request body will carry the JSON.
 
 Entire pipe is golang so transform or filter stage is familiar.
 
-```
+---
 
 ## Main errors on input or output stream
 
@@ -172,6 +175,16 @@ Entire pipe is golang so transform or filter stage is familiar.
 ---
 
 
+## Security considerations
+
+```
+Because the pipe is launched by logstash I believe the certs would be in place for logstash input 
+as usual. As for output in the egopipe stage3 we need to configure user and password. These will
+be additions to egopipe.conf.
+
+```
+
+
 ## Testing egopipe
 
 ```
@@ -190,11 +203,20 @@ example doc: (json)
 ## Metrics
 
 ```
-So far trivial fields
-Elapsed - rough estimate time after read/decode to write index success
+
+These metrics give you a realtime look at what might be happening with your data. If you want something more exotic you should use Kibana. Figures are post filter so additions/deletions will be seen.
+
+Elapsed - rough estimate time after read/decode to write index success (end to end)
 Bytes - total bytes transit
 Docs - total doc count
-Fields - map is count per field count in docs this gives you a rough idea what is coming in and what is done in the filter.
+Fields - map is docs grouped by number of fields per doc and count within, this gives you a rough idea what is coming in and 
+what is done in the filter.
+docFields - number fields this doc
+
+Rest endpoint
+GET list - all docs
+GET id= - individual doc
+
 ```
 
 
@@ -206,17 +228,22 @@ add target config value (complete 03/12)
 
 add name config value (complete 03/12)
 
-config changes now installed //etc/logstash/conf.d (complete 03/15)
+config changes now installed /etc/logstash/conf.d (complete 03/15)
 
 assess comparison logstash plugins to go methods (README)
 
-metrics What kind?
+metrics What kind? (complete 03/21)
 
-metrics wants perhaps an end to end traversal time
+metrics wants perhaps an end to end traversal time (complete 03/21)
 
 evaluate debug function output
+
+change default location of log and name /var/log/logstash/egopipe/egopipe (complete 03/22)
 
 security
 
 test what happens in queue backup
+
+add metrics as a rest API call... GET metrics?
+
 ---

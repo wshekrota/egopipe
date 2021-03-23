@@ -47,6 +47,12 @@ func main() {
 		log.Fatalf("Egopipe config Unmarshal error: %v", err)
 	}
 
+	res := setLog()
+	if res != nil {
+		log.Fatalf("Egopipe config setLog error: %v", err)
+		os.Exit(28)
+	}
+
 	var Hash map[string]interface{}
 	c := make(chan *map[string]interface{})
 	r := make(chan Result)
@@ -93,6 +99,22 @@ func main() {
         log.Println("metrics:",totals)
 	}
 
+}
+
+
+func setLog() error {
+
+    de := os.Mkdir("/var/log/logstash/egopipe", 0644)
+    if de != nil {  // error would be file exists thats ok
+    }
+    file, err := os.OpenFile("/var/log/logstash/egopipe/egopipe.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    log.SetPrefix("/var/log/logstash/egopipe")
+    log.SetOutput(file)
+    return err
 }
 
 
