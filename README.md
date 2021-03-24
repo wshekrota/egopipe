@@ -240,7 +240,7 @@ evaluate debug function output
 
 change default location of log and name /var/log/logstash/egopipe/egopipe (complete 03/22)
 
-security
+security (add user/pw to config for elastic)
 
 test what happens in queue backup
 

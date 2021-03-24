@@ -10,6 +10,8 @@ import "bytes"
 import "fmt"
 import "strings"
 import "time"
+// import "encoding/base64"
+import "strconv"
 
 /*
    Author: Walt Shekrota wshekrota@icloud.com
@@ -29,12 +31,11 @@ type Result struct {
 }
 
 type Metrics struct {
-    Bytes int
-    Docs int
-    Fields map[int]int
-    Elapsed time.Duration
+	Bytes   int
+	Docs    int
+	Fields  map[int]int
+	Elapsed time.Duration
 }
-
 
 func main() {
 
@@ -56,23 +57,23 @@ func main() {
 	var Hash map[string]interface{}
 	c := make(chan *map[string]interface{})
 	r := make(chan Result)
-    totals := Metrics{}
-    totals.Fields = make(map[int]int)
-    
+	totals := Metrics{}
+	totals.Fields = make(map[int]int)
+
 	// Read json from stdin passed from null logstash pipe
 	//
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-	    // Read from pipe
-	    //
+		// Read from pipe
+		//
 		slice, _ := (*reader).ReadBytes('\n')
 
 		if err := json.Unmarshal(slice, &Hash); err != nil {
 			fmt.Printf("Egopipe input Unmarshal error: %v", err)
 		}
-        now := time.Now().UTC()
+		now := time.Now().UTC()
 
 		// Save datestamp for output stage
 		//
@@ -84,64 +85,62 @@ func main() {
 		pstg2map := <-c // return pointer to internal map
 
 		go output(ds, p, pstg2map, r) // stage 3
-		resp := <- r
+		resp := <-r
 		log.Println("response from output", resp.Message, err)
-        if err != nil {
-           os.Exit(3)
-        }
+		if err != nil {
+			os.Exit(3)
+		}
 
-        totals.Elapsed = time.Since(now)
-        totals.Docs++
-        totals.Bytes+=len(resp.Message)
-        nfields := len(*pstg2map)
-    	(totals.Fields)[nfields]++
+		totals.Elapsed = time.Since(now)
+		totals.Docs++
+		totals.Bytes += len(resp.Message)
+		(totals.Fields)[len(*pstg2map)]++
 
-        log.Println("metrics:",totals)
+		log.Println("metrics:", totals)
 	}
 
 }
 
-
 func setLog() error {
 
-    de := os.Mkdir("/var/log/logstash/egopipe", 0644)
-    if de != nil {  // error would be file exists thats ok
-    }
-    file, err := os.OpenFile("/var/log/logstash/egopipe/egopipe.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-    if err != nil {
-        log.Fatal(err)
-    }
+	de := os.Mkdir("/var/log/logstash/egopipe", 0644)
+	if de != nil { // error would be file exists thats ok
+	}
+	file, err := os.OpenFile("/var/log/logstash/egopipe/egopipe.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    log.SetPrefix("/var/log/logstash/egopipe")
-    log.SetOutput(file)
-    return err
+	log.SetPrefix("/var/log/logstash/egopipe")
+	log.SetOutput(file)
+	return err
 }
 
+func getConf() (map[string]string, error) {
 
-type Config struct {
-	Target string
-	Name   string
-}
-
-
-func getConf() (*Config, error) {
-
-	conf := &Config{Target: "http://127.0.0.1:9200", Name: "egopipe"}
+	var n map[string]interface{}
+	// set known defaults here
+	//
+	m := map[string]string{"Target": "http://127.0.0.1:9200", "Name": "egopipe", "User": "", "Password": ""}
 
 	file, err := ioutil.ReadFile("/etc/logstash/conf.d/egopipe.conf")
 
 	if err != nil { // soft error
 		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
-		return conf, err
+		return m, err
 	} else {
-		err = json.Unmarshal(file, conf)
-		if err != nil {
-			return conf, err
-		}
-	}
-	return conf, nil
-}
 
+		err = json.Unmarshal(file, &n)
+		if err != nil {
+			return m, err
+		}
+		for key, val := range n {
+			m[key] = val.(string)
+		}
+
+	}
+	return m, nil
+}
 
 /*
 
@@ -160,12 +159,11 @@ func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 	//    delete(h,"key")      // delete field
 	//    _, found := h["key"] // true or false does this field exist?
 
-//	    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
-//	    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
+	//	    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
+	//	    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
 
 	c <- &h // Although you write code here this line is required
 }
-
 
 /*
 
@@ -174,7 +172,8 @@ func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 
 */
 
-func output(dateof string, c *Config, hp *map[string]interface{}, r chan Result) {
+
+func output(dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
 
 	var s Result
 	jbuf, err := json.Marshal(hp)
@@ -183,7 +182,7 @@ func output(dateof string, c *Config, hp *map[string]interface{}, r chan Result)
 		s.Error = err
 	} else {
 		responseBody := bytes.NewBuffer(jbuf)
-		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c.Target, c.Name, dateof)
+		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
 		resp, err := http.Post(url, "application/json", responseBody)
 		if err != nil {
 			s.Message = fmt.Sprintf("Egopipe output POST error #s writing Elastic index. error: %v", resp.Status, err)
@@ -193,6 +192,65 @@ func output(dateof string, c *Config, hp *map[string]interface{}, r chan Result)
 			body, err := ioutil.ReadAll(resp.Body)
 			s.Message = string(body)
 			s.Error = err
+		}
+	}
+	r <- s
+}
+
+
+func newoutput(dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
+
+	var s Result
+
+	jbuf, err := json.Marshal(hp)
+	if err != nil {
+		s.Message = fmt.Sprintf("Egopipe input Marshal error: %v", err)
+		s.Error = err
+	} else {
+		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
+		log.Println(url)
+		client := &http.Client{}
+		// form request
+		req, err := http.NewRequest("POST", url, nil)
+		if err != nil {
+		    s.Error = err
+			s.Message = "error request=" 
+		}
+
+		/*
+
+		   Basic Auth:  encode authentication in the header so it is not exposed
+
+		*/
+//		if len(c["User"]) != 0 {
+			// authentication string
+//			as := fmt.Sprintf("%s:%s", c["User"], c["Password"])
+//			enc := base64.StdEncoding.EncodeToString([]byte(as))
+//			auth := fmt.Sprintf("%s %s", "Basic", enc)
+
+			// add to header
+//			req.Header.Set("Authorization", auth)
+//		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Length", strconv.Itoa(len(jbuf)))
+		req.Header.Set("Content", string(jbuf))
+
+		// do it
+		response, err := client.Do(req)
+		if err != nil {
+		    s.Error = err
+			s.Message = "error do=" 
+		}
+		// read the response
+		bites, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+		    s.Error = err
+			s.Message = "error read=" 
+		} else {
+			s.Message = string(bites) + "+++"
+			s.Error = err
+			defer response.Body.Close()
 		}
 	}
 	r <- s
