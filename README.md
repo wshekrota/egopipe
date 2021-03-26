@@ -31,6 +31,8 @@ Config is minimalist and currently few values defined. Will expand as needed.
 
 Defaults are defined in code. Values in egopipe.conf will override those.
 
+Uses maps to individually union the defaults with config file settings.
+
 egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ```
@@ -38,6 +40,10 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 "target": "http://127.0.0.1:9200" (default)
 
 "name": "egopipe" (default)
+
+"user": "fred" (default is empty or insecure)
+
+"passsword": "bogus99" (same)
 
 ```
 
@@ -178,9 +184,12 @@ Entire pipe is golang so transform or filter stage is familiar.
 ## Security considerations
 
 ```
-Because the pipe is launched by logstash I believe the certs would be in place for logstash input 
-as usual. As for output in the egopipe stage3 we need to configure user and password. These will
-be additions to egopipe.conf.
+
+Enabling TLS on an Elastic transaction is a two fold process. We must setup TLS over the http
+connection. So we copy the ca cert to the /etc/loggstash/conf.d along with the egopipe executable
+annd conf file. The conf file MUST contain a target that specifies https not http and a user
+and password to authenticate. Both TLS and authentication are a requirement.
+
 
 ```
 
@@ -213,7 +222,7 @@ Fields - map is docs grouped by number of fields per doc and count within, this 
 what is done in the filter.
 docFields - number fields this doc
 
-Rest endpoint
+Rest endpoint (maybe)
 GET list - all docs
 GET id= - individual doc
 
@@ -230,20 +239,20 @@ add name config value (complete 03/12)
 
 config changes now installed /etc/logstash/conf.d (complete 03/15)
 
-assess comparison logstash plugins to go methods (README)
-
 metrics What kind? (complete 03/21)
 
 metrics wants perhaps an end to end traversal time (complete 03/21)
 
-evaluate debug function output
-
 change default location of log and name /var/log/logstash/egopipe/egopipe (complete 03/22)
 
-security (add user/pw to config for elastic)
+security (add user/pw to config for elastic) (committed 03/24i-26) testing
+
+assess comparison logstash plugins to go methods (README)
 
 test what happens in queue backup
 
 add metrics as a rest API call... GET metrics?
+
+evaluate debug function output
 
 ---

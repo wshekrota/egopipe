@@ -10,8 +10,9 @@ import "bytes"
 import "fmt"
 import "strings"
 import "time"
-// import "encoding/base64"
-import "strconv"
+import "encoding/base64"
+import "crypto/tls"
+import "crypto/x509"
 
 /*
    Author: Walt Shekrota wshekrota@icloud.com
@@ -59,6 +60,30 @@ func main() {
 	r := make(chan Result)
 	totals := Metrics{}
 	totals.Fields = make(map[int]int)
+    var client *http.Client
+
+	// Read cert in
+	//
+    if Secure := strings.HasPrefix(p["Target"],"https"); Secure {
+		caCert, err := ioutil.ReadFile("cert.pem")
+		if err != nil {
+			log.Fatal(err)
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		// Create a HTTPS client and supply the created CA pool
+		//
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: caCertPool,
+				},
+			},
+		}
+    } else {
+		client = &http.Client{}
+    }
 
 	// Read json from stdin passed from null logstash pipe
 	//
@@ -84,9 +109,9 @@ func main() {
 		log.Println(Hash["message"])
 		pstg2map := <-c // return pointer to internal map
 
-		go output(ds, p, pstg2map, r) // stage 3
+		go output(client, ds, p, pstg2map, r) // stage 3
 		resp := <-r
-		log.Println("response from output", resp.Message, err)
+		log.Println("response from output", resp.Message, resp.Error)
 		if err != nil {
 			os.Exit(3)
 		}
@@ -173,32 +198,7 @@ func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
 */
 
 
-func output(dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
-
-	var s Result
-	jbuf, err := json.Marshal(hp)
-	if err != nil {
-		s.Message = fmt.Sprintf("Egopipe input Marshal error: %v", err)
-		s.Error = err
-	} else {
-		responseBody := bytes.NewBuffer(jbuf)
-		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
-		resp, err := http.Post(url, "application/json", responseBody)
-		if err != nil {
-			s.Message = fmt.Sprintf("Egopipe output POST error #s writing Elastic index. error: %v", resp.Status, err)
-			s.Error = err
-		} else {
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			s.Message = string(body)
-			s.Error = err
-		}
-	}
-	r <- s
-}
-
-
-func newoutput(dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
+func output(client *http.Client, dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
 
 	var s Result
 
@@ -208,49 +208,53 @@ func newoutput(dateof string, c map[string]string, hp *map[string]interface{}, r
 		s.Error = err
 	} else {
 		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
-		log.Println(url)
-		client := &http.Client{}
-		// form request
-		req, err := http.NewRequest("POST", url, nil)
+
+		// post request
+		//
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jbuf))
 		if err != nil {
-		    s.Error = err
-			s.Message = "error request=" 
-		}
-
-		/*
-
-		   Basic Auth:  encode authentication in the header so it is not exposed
-
-		*/
-//		if len(c["User"]) != 0 {
-			// authentication string
-//			as := fmt.Sprintf("%s:%s", c["User"], c["Password"])
-//			enc := base64.StdEncoding.EncodeToString([]byte(as))
-//			auth := fmt.Sprintf("%s %s", "Basic", enc)
-
-			// add to header
-//			req.Header.Set("Authorization", auth)
-//		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Length", strconv.Itoa(len(jbuf)))
-		req.Header.Set("Content", string(jbuf))
-
-		// do it
-		response, err := client.Do(req)
-		if err != nil {
-		    s.Error = err
-			s.Message = "error do=" 
-		}
-		// read the response
-		bites, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-		    s.Error = err
-			s.Message = "error read=" 
-		} else {
-			s.Message = string(bites) + "+++"
 			s.Error = err
-			defer response.Body.Close()
+			s.Message = "error request="
+		} else {
+
+			/*
+
+			   Basic Auth:  encode authentication in the header so it is not exposed
+
+			*/
+			if len(c["User"]) != 0 {
+				// build authentication string
+				//
+				as := fmt.Sprintf("%s:%s", c["User"], c["Password"])
+				enc := base64.StdEncoding.EncodeToString([]byte(as))
+				auth := fmt.Sprintf("%s %s", "Basic", enc)
+
+				// add to header
+				//
+				req.Header.Add("Authorization", auth)
+			}
+
+			req.Header.Add("Content-Type", "application/json")
+
+			// do it
+			//
+			response, err := (*client).Do(req)
+			if err != nil {
+				s.Error = err
+				s.Message = "error do="
+			} else {
+				// read the response
+				//
+				bites, err := ioutil.ReadAll(response.Body)
+				if err != nil {
+					s.Error = err
+					s.Message = "error read="
+				} else {
+					s.Message = string(bites)
+					s.Error = err
+					defer response.Body.Close()
+				}
+			}
 		}
 	}
 	r <- s
