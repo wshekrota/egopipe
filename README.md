@@ -27,7 +27,7 @@ filebeat and logstash.
 
 ---
 
-Config is minimalist and currently few values defined. Will expand as needed.
+Config is minimalist JSON and currently few values defined. Will expand as needed.
 
 Defaults are defined in code. Values in egopipe.conf will override those.
 
@@ -37,7 +37,7 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ```
 
-"target": "http://127.0.0.1:9200" (default)
+"target": "https://192.168.1.43:9200" (default)
 
 "name": "egopipe" (default)
 
@@ -49,6 +49,31 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ---
 
+## installation
+
+---
+
+Egopipe install directory is /etc/logstash/conf.d.
+After compiling the binary which allows you to add go code in filter section, place
+it here. Along with it will reside egopipe.conf which is json. Note the hostnames
+here assume you followed the elastic documentation in naming the hosts etc.
+
+```
+
+{ "Target": "https://node-1.elastic.test.com:9200","User":"elastic","Password":"pw" }
+
+(you will probably want to use a user you have setup with kibana DSL)
+
+```
+
+If securing the cluster follow those rules below copying the cert to this same 
+directory. If it is here egopipe reads it and prioritizes its items over the 
+default values.
+Last thing is  the suggested logstash pipeline.conf file whose output stage 
+invokes egopipe.
+
+---
+
 
 ## dependencies:
 
@@ -57,6 +82,9 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
     - filebeat as input (queuing) recommend spool, default is memory 4096. 
     - egopipe config file should be copied to /etc/logstash/conf.d to claim elastic host target.
     - logstash jvm.options config in /etc/logstash should have upper memory set as in ..Xmx2g
+    - you have configured the rest of your elastic cluster as in the appropriate document *
+
+[great elastic document](https://www.elastic.co/blog/configuring-ssl-tls-and-https-to-secure-elasticsearch-kibana-beats-and-logstash#prepare-logstash)
 
 ---
 
