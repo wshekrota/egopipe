@@ -1,4 +1,4 @@
-package main
+package egopipe
 
 import "io/ioutil"
 import "bufio"
@@ -6,11 +6,11 @@ import "net/http"
 import "log"
 import "os"
 import "encoding/json"
-import "bytes"
+//import "bytes"
 import "fmt"
 import "strings"
 import "time"
-import "encoding/base64"
+//import "encoding/base64"
 import "crypto/tls"
 import "crypto/x509"
 
@@ -25,11 +25,6 @@ import "crypto/x509"
    Logstash is just an empty conduit.
 
 */
-
-type Result struct {
-	Message string
-	Error   error
-}
 
 type Metrics struct {
 	Bytes   int
@@ -126,136 +121,3 @@ func main() {
 
 }
 
-func setLog() error {
-
-	de := os.Mkdir("/var/log/logstash/egopipe", 0644)
-	if de != nil { // error would be file exists thats ok
-	}
-	file, err := os.OpenFile("/var/log/logstash/egopipe/egopipe.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.SetPrefix("/var/log/logstash/egopipe")
-	log.SetOutput(file)
-	return err
-}
-
-func getConf() (map[string]string, error) {
-
-	var n map[string]interface{}
-	// set known defaults here
-	//
-	m := map[string]string{"Target": "http://127.0.0.1:9200", "Name": "egopipe", "User": "", "Password": ""}
-
-	file, err := ioutil.ReadFile("/etc/logstash/conf.d/egopipe.conf")
-
-	if err != nil { // soft error
-		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
-		return m, err
-	} else {
-
-		err = json.Unmarshal(file, &n)
-		if err != nil {
-			return m, err
-		}
-		for key, val := range n {
-			m[key] = val.(string)
-		}
-
-	}
-	return m, nil
-}
-
-/*
-
-   stage 2
-   Where your filter code runs. The doc object is the h map
-
-*/
-
-func yourpipecode(h map[string]interface{}, c chan *map[string]interface{}) {
-
-	// h is the hash representing your docs
-	// keys are fields
-	// value is interface{} and must be asserted
-
-	//	  h["test"] = 31415    // example field add
-	//    delete(h,"key")      // delete field
-	//    _, found := h["key"] // true or false does this field exist?
-
-	//	    idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
-	//	    if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
-
-	c <- &h // Although you write code here this line is required
-}
-
-/*
-
-   stage 3
-   Output to index in Elastic
-
-*/
-
-
-func output(client *http.Client, dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
-
-	var s Result
-
-	jbuf, err := json.Marshal(hp)
-	if err != nil {
-		s.Message = fmt.Sprintf("Egopipe input Marshal error: %v", err)
-		s.Error = err
-	} else {
-		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
-
-		// post request
-		//
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jbuf))
-		if err != nil {
-			s.Error = err
-			s.Message = "error request="
-		} else {
-
-			/*
-
-			   Basic Auth:  encode authentication in the header so it is not exposed
-
-			*/
-			if len(c["User"]) != 0 {
-				// build authentication string
-				//
-				as := fmt.Sprintf("%s:%s", c["User"], c["Password"])
-				enc := base64.StdEncoding.EncodeToString([]byte(as))
-				auth := fmt.Sprintf("%s %s", "Basic", enc)
-
-				// add to header
-				//
-				req.Header.Add("Authorization", auth)
-			}
-
-			req.Header.Add("Content-Type", "application/json")
-
-			// do it
-			//
-			response, err := (*client).Do(req)
-			if err != nil {
-				s.Error = err
-				s.Message = "error do="
-			} else {
-				// read the response
-				//
-				bites, err := ioutil.ReadAll(response.Body)
-				if err != nil {
-					s.Error = err
-					s.Message = "error read="
-				} else {
-					s.Message = string(bites)
-					s.Error = err
-					defer response.Body.Close()
-				}
-			}
-		}
-	}
-	r <- s
-}

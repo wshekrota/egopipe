@@ -1,12 +1,20 @@
 # egopipe
 
-A minimalist solution for logstash complexity in Elastic
+### What is Egopipe?
 
-# Conventional ETL minimalist pipeline written in Go for Elasticstack
+Conventional ETL minimalist pipeline written in Go for Elasticstack. Basically
+
+it extends the pipeline capability of logstash giving you a go environment to
+
+manipulate your doc. It has a minimalist approach to configuring, stop living
+
+with complexity
 
 Format: ![egopipe logo](https://www.google.com/imgres?imgurl=https%3A%2F%2Fgolangforall.com%2Fassets%2Ftube2.svg&imgrefurl=https%3A%2F%2Fgolangforall.com%2Fen%2Fgopher-drawings.html&tbnid=OMB0gw9yicfL9M&vet=10CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE..i&docid=Ges437lBH6SG0M&w=800&h=519&q=golang%20gopher%20graphics&client=ubuntu&ved=0CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE)
 
 ![logo](https://github.com/wshekrota/egopipe/blob/main/logo.png)
+
+### Why use Egopipe?
 
 If you have ever used Elasticstack the wonderful analytics suite from Elastic you quickly realize that the 
 ingestion engine logstash is its great short coming. On the good side it has so many options. On the bad side
@@ -21,6 +29,10 @@ rather rich well designed base of functionality I wanted to depend on it. The un
 fact was that filebeat has a dependency on logstash input. If you tried to write your own logstash you would have to 
 understand the complexity of whatever encode/decode (lumberjack) happens on that socketed interface between
 filebeat and logstash.
+
+I chose to let logstash receive the input and launch my pipe. Little changes and the configuration seems 
+intuitive. The only thing you change is a small json config file and add a cert to the directory
+if running securely. 
 
 
 ## config file management
@@ -43,7 +55,7 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 "user": "fred" (default is empty or insecure)
 
-"passsword": "bogus99" (same)
+"password": "bogus99" (same)
 
 ```
 
@@ -67,10 +79,19 @@ here assume you followed the elastic documentation in naming the hosts etc.
 ```
 
 If securing the cluster follow those rules below copying the cert to this same 
-directory. If it is here egopipe reads it and prioritizes its items over the 
+directory. If the file exists here egopipe reads it and prioritizes its items over the 
 default values.
 Last thing is  the suggested logstash pipeline.conf file whose output stage 
 invokes egopipe.
+
+```
+
+.l executatble
+.l configuration file
+.l pipeline.conf (logstash)
+.l ca cert
+
+```
 
 ---
 
@@ -283,4 +304,5 @@ add metrics as a rest API call... GET metrics?
 
 evaluate debug function output
 
+now that I have a working model refactor code into separate files organized within package
 ---
