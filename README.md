@@ -174,7 +174,7 @@ if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
 
 ---
 
-* POST /target/_doc/ *
+* POST /target/_doc/ 
 
 Request body will carry the JSON.
 
@@ -225,7 +225,7 @@ Entire pipe is golang so transform or filter stage is familiar.
 **stage3** (called w/ ref to stage2 map)
 
 * encode back to json
-* PUT API call (write to elastic index)
+* POST API call (write to elastic index)
 
 ---
 
