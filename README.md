@@ -41,7 +41,6 @@ Defaults are defined in code. Values in egopipe.conf will override those.
 
 Uses maps to individually union the defaults with config file settings.
 
-egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ```
 
@@ -51,7 +50,7 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 "user": user if secured				""
 
-"password": password if secured		""
+"password": password if secured     ""
 
 ```
 
@@ -61,7 +60,7 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ---
 
-Egopipe install directory is /etc/logstash/conf.d.
+The egopipe install directory is /etc/logstash/conf.d.
 After compiling the binary which allows you to add go code in filter section, place
 it here. Along with it will reside egopipe.conf which is json. Note the hostnames
 here assume you followed the elastic documentation in naming the hosts etc.
@@ -84,10 +83,10 @@ invokes egopipe.
 
 What belongs in .etc.logstash/conf.d?
 
-.l executable
-.l configuration file
-.l pipeline.conf (logstash)
-.l ca cert
+* executable
+* configuration file
+* pipeline.conf (logstash)
+* ca cert
 
 ---
 
@@ -114,7 +113,7 @@ Functional - currently in testing
 
 ---
 
-Filebeat sends socket in some layered lumberjack protocol on top of TCP. This makes it difficult to receive data 
+Filebeat sends the socket in some layered lumberjack protocol on top of TCP. This makes it difficult to receive data 
 direct on a go socket. I am opting to use a mostly null logstash pipe to receive the filebeat input then to 
 launch the go program using the 'pipe' plugin. In this way I do not have to deal with lumberjack.
 
@@ -139,7 +138,7 @@ output {
 
 On the output side of logstash what we get is JSON for the docs traveling through the pipelines. Then entering the go code we 
 can decode and process that doc. Decoded we have a map which is very easy to manipulate in golang.
-When done we encode the map back to json and ultimately we  put the annotated doc in an elastic index by way of an API call. 
+When done we encode the map back to json. Ultimately we  put the annotated doc in an elastic index by way of an API call. 
 
 
 ## The Nitty Gritty (or how do I write the filter section in go)
@@ -232,8 +231,8 @@ Entire pipe is golang so transform or filter stage is familiar.
 ```
 
 Enabling TLS on an Elastic transaction is a two fold process. We must setup TLS over the http
-connection. So we copy the ca cert to the /etc/loggstash/conf.d along with the egopipe executable
-annd conf file. The conf file MUST contain a target that specifies https not http and a user
+connection. So we copy the ca cert to the /etc/logstash/conf.d along with the egopipe executable
+and conf file. The conf file MUST contain a target that specifies https not http and a user
 and password to authenticate. Both TLS and authentication are a requirement.
 
 
@@ -268,7 +267,7 @@ Fields - map is docs grouped by number of fields per doc and count within, this 
 what is done in the filter.
 docFields - number fields this doc
 
-Rest endpoint (maybe)
+Rest endpoint (todo maybe)
 GET list - all docs
 GET id= - individual doc
 
