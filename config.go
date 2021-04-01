@@ -1,4 +1,4 @@
-package egopipe
+package main
 
 import "encoding/json"
 import "fmt"
@@ -6,24 +6,39 @@ import "io/ioutil"
 
 
 
+// Manage config file for pipe setup.
+// Where is elasticsearch, core name for index and who authenticates?
 func getConf() (map[string]string, error) {
 
 	var n map[string]interface{}
-	// set known defaults here
+	
+	// set known defaults here .. insecure
 	//
-	m := map[string]string{"Target": "http://127.0.0.1:9200", "Name": "egopipe", "User": "", "Password": ""}
+	m := map[string]string{
+			"Target": "http://127.0.0.1:9200",
+			"Name": "egopipe",
+			"User": "",
+			"Password": ""}
 
-	file, err := ioutil.ReadFile("/etc/logstash/conf.d/egopipe.conf")
+    // Read config file from install directory
+    //
+	file, err := ioutil.ReadFile(ConfigName)
 
 	if err != nil { // soft error
 		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
 		return m, err
+
 	} else {
 
+                // json to map
+                //
 		err = json.Unmarshal(file, &n)
 		if err != nil {
 			return m, err
 		}
+
+		// map overlay defaults
+		//
 		for key, val := range n {
 			m[key] = val.(string)
 		}

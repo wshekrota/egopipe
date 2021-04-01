@@ -2,13 +2,9 @@
 
 ### What is Egopipe?
 
-Conventional ETL minimalist pipeline written in Go for Elasticstack. Basically
-
-it extends the pipeline capability of logstash giving you a go environment to
-
-manipulate your doc. It has a minimalist approach to configuring, stop living
-
-with complexity
+Conventional ETL minimalist pipeline written in Go for Elasticstack. Basically it extends the pipeline 
+capability of logstash giving you a go environment to manipulate your doc. It has a minimalist approach 
+to configuring, stop living with complexity
 
 Format: ![egopipe logo](https://www.google.com/imgres?imgurl=https%3A%2F%2Fgolangforall.com%2Fassets%2Ftube2.svg&imgrefurl=https%3A%2F%2Fgolangforall.com%2Fen%2Fgopher-drawings.html&tbnid=OMB0gw9yicfL9M&vet=10CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE..i&docid=Ges437lBH6SG0M&w=800&h=519&q=golang%20gopher%20graphics&client=ubuntu&ved=0CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE)
 
@@ -49,13 +45,13 @@ egopipe and egopipe.conf now should be installed to '/etc/logstash/conf.d'.
 
 ```
 
-"target": "https://192.168.1.43:9200" (default)
+"target": protocol:hostname:port 	http:127.0.0.1:9200
 
-"name": "egopipe" (default)
+"name": unique part of index name	egopipe
 
-"user": "fred" (default is empty or insecure)
+"user": user if secured				""
 
-"password": "bogus99" (same)
+"password": password if secured		""
 
 ```
 
@@ -72,6 +68,8 @@ here assume you followed the elastic documentation in naming the hosts etc.
 
 ```
 
+Content example for egopipe.conf
+
 { "Target": "https://node-1.elastic.test.com:9200","User":"elastic","Password":"pw" }
 
 (you will probably want to use a user you have setup with kibana DSL)
@@ -84,14 +82,12 @@ default values.
 Last thing is  the suggested logstash pipeline.conf file whose output stage 
 invokes egopipe.
 
-```
+What belongs in .etc.logstash/conf.d?
 
-.l executatble
+.l executable
 .l configuration file
 .l pipeline.conf (logstash)
 .l ca cert
-
-```
 
 ---
 
@@ -108,6 +104,7 @@ invokes egopipe.
 [great elastic document](https://www.elastic.co/blog/configuring-ssl-tls-and-https-to-secure-elasticsearch-kibana-beats-and-logstash#prepare-logstash)
 
 ---
+
 
 ## Status
 
@@ -294,7 +291,7 @@ metrics wants perhaps an end to end traversal time (complete 03/21)
 
 change default location of log and name /var/log/logstash/egopipe/egopipe (complete 03/22)
 
-security (add user/pw to config for elastic) (committed 03/24i-26) testing
+security (add user/pw to config for elastic) (committed 03/24-26) testing
 
 assess comparison logstash plugins to go methods (README)
 
@@ -304,5 +301,6 @@ add metrics as a rest API call... GET metrics?
 
 evaluate debug function output
 
-now that I have a working model refactor code into separate files organized within package
+now that I have a working model refactor code into separate files organized within package (complete 03/28)
+
 ---

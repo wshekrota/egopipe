@@ -1,4 +1,4 @@
-package egopipe
+package main
 
 import "io/ioutil"
 import "bufio"
@@ -6,11 +6,9 @@ import "net/http"
 import "log"
 import "os"
 import "encoding/json"
-//import "bytes"
 import "fmt"
 import "strings"
 import "time"
-//import "encoding/base64"
 import "crypto/tls"
 import "crypto/x509"
 
@@ -26,6 +24,7 @@ import "crypto/x509"
 
 */
 
+
 type Metrics struct {
 	Bytes   int
 	Docs    int
@@ -33,6 +32,10 @@ type Metrics struct {
 	Elapsed time.Duration
 }
 
+
+// The main contols the pipe in am ETL fashion. SSL and authentication is also handled for elastic host.
+// Read stdin, amend the doc, output to index
+// Delivers ent to end statistics in log so you can assess response time.
 func main() {
 
 	// Read config options
@@ -58,6 +61,7 @@ func main() {
     var client *http.Client
 
 	// Read cert in
+	// is it a secure transaction?
 	//
     if Secure := strings.HasPrefix(p["Target"],"https"); Secure {
 		caCert, err := ioutil.ReadFile("cert.pem")
@@ -76,7 +80,10 @@ func main() {
 				},
 			},
 		}
-    } else {
+
+    // or it is unsecure transaction ie http
+    //
+    } else { 
 		client = &http.Client{}
     }
 
@@ -89,9 +96,14 @@ func main() {
 		// Read from pipe
 		//
 		slice, _ := (*reader).ReadBytes('\n')
+		if err != nil  {
+			fmt.Printf("Returned data does not end in delimiter: %v", err)
+			os.Exit(3)
+		}
 
 		if err := json.Unmarshal(slice, &Hash); err != nil {
 			fmt.Printf("Egopipe input Unmarshal error: %v", err)
+			os.Exit(3)
 		}
 		now := time.Now().UTC()
 
@@ -101,11 +113,15 @@ func main() {
 		ds = strings.Replace(ds, "-", ".", 2)
 
 		go yourpipecode(Hash, c) // stage 2
-		log.Println(Hash["message"])
-		pstg2map := <-c // return pointer to internal map
+
+		// return pointer to internal map
+                // if channel not returned will block here
+                //
+		pstg2map := <-c 
 
 		go output(client, ds, p, pstg2map, r) // stage 3
 		resp := <-r
+
 		log.Println("response from output", resp.Message, resp.Error)
 		if err != nil {
 			os.Exit(3)

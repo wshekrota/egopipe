@@ -1,4 +1,4 @@
-package egopipe
+package main
 
 import "net/http"
 import "encoding/json"
@@ -12,7 +12,8 @@ import "io/ioutil"
 /*
 
    stage 3
-   Output to index in Elastic
+   Output to index in Elastic.
+   Runs as a goroutine to concurrently manage the security and output of the doc.
 
 */
 
@@ -22,6 +23,8 @@ type Result struct {
 	Error   error
 }
 
+// Function: output manages the docs output to an index.
+// Passed: client structure, date string for index name, config map, ref to stage2 map, channel to return struct
 
 func output(client *http.Client, dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
 
