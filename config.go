@@ -22,7 +22,7 @@ func getConf() (map[string]string, error) {
 
     // Read config file from install directory
     //
-	file, err := ioutil.ReadFile(ConfigName)
+	file, err := ioutil.ReadFile("ego/" + ConfigName)
 
 	if err != nil { // soft error
 		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)

@@ -64,7 +64,7 @@ func main() {
 	// is it a secure transaction?
 	//
     if Secure := strings.HasPrefix(p["Target"],"https"); Secure {
-		caCert, err := ioutil.ReadFile("cert.pem")
+		caCert, err := ioutil.ReadFile("ego/cert.pem")
 		if err != nil {
 			log.Fatal(err)
 		}

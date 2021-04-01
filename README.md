@@ -60,9 +60,10 @@ Uses maps to individually union the defaults with config file settings.
 
 ---
 
-The egopipe install directory is /etc/logstash/conf.d.
+The egopipe install directory is /etc/logstash/conf.d. But we have to put the non 
+pipe files out of logstash reach creating an ego sub directory there.
 After compiling the binary which allows you to add go code in filter section, place
-it here. Along with it will reside egopipe.conf which is json. Note the hostnames
+it here.(in ego) Along with it will reside egopipe.conf which is json. Note the hostnames
 here assume you followed the elastic documentation in naming the hosts etc.
 
 ```
@@ -76,17 +77,16 @@ Content example for egopipe.conf
 ```
 
 If securing the cluster follow those rules below copying the cert to this same 
-directory. If the file exists here egopipe reads it and prioritizes its items over the 
-default values.
-Last thing is  the suggested logstash pipeline.conf file whose output stage 
-invokes egopipe.
+directory as ca.pem. If the egopipe.conf file exists here egopipe reads it and prioritizes 
+its items over the default values. Last thing is the suggested logstash pipeline.conf 
+file whose output stage invokes egopipe. Place it in the conf.d directory.
 
-What belongs in .etc.logstash/conf.d?
+What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf.
 
-* executable
-* configuration file
-* pipeline.conf (logstash)
-* ca cert
+* executable (conf.d/ego)
+* configuration file (conf.d/ego)
+* pipeline.conf (conf.d)
+* ca cert (conf.d/ego) following the elastic cert instructions you get a ca.crt which you rename to ca.pem
 
 ---
 
