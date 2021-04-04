@@ -147,6 +147,7 @@ This is where you take action on all or selectively some of the docs passing thr
 Forget the idea of plugins. Now you will effect changes in a go like manner. You will find it easy 
 to do some things in a manner very similar to the comparitive logstash plugin or in many cases 
 invent some new process.
+
 I highly advise that we carry forward some of the same practices that made our pipe more easily 
 debugable. Most forward in my mind is tag. Pipes are a form of headless operation thus difficult
 to debug. Setting eye catchers is something you can design into your code. In logstash I had a tag 
@@ -154,9 +155,13 @@ for every nook and cranny. If something went wrong with specific logic I could l
 associated with it and find its fields using kibana. This is an indespensible practice.
 Not every thing you will do needs to be documented here obviously. This is meant to get you started.
 
+Your doc is a folder of fields. A field like message is a string containing the entire content.
+You then act on that map to change and/or add new fields. Then we write it to the elastic index.
+
+
 ### Create a field or tag
 ```
-h["tag"] = "DescriptiveAreaOfYourCode"
+h["tag"] = "Data for that field value"
 ```
 
 ### Does a field exist?
@@ -171,6 +176,12 @@ if _, ok := h["fieldname"]; ok {
 delete(h,"fieldname")
 ```
 
+### Rename a field
+```
+h["newfieldname"] = h["oldfieldname"]
+delete(h,"oldfieldname")
+```
+
 ### JSON decode (no prefixing string)
 ```
 json.Unmarshal([]byte(h["message"].(string)),&h)
@@ -182,6 +193,28 @@ idx := strings.IndexRune(h["message"].(string),'{')
 if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
 ```
 
+## An example decode application in egopipe using gitlab logs
+
+---
+
+By filebeat feeding ../gitlab/gitaly logs  to our logstash we can experiment. The gitaly logs are completely 
+json and we can use the top Unmarshal line above to decode the message into fields.
+
+![kibana_screen](https://github.com/wshekrota/egopipe/blob/main/jsondecode.png)
+
+In this screen you can look at the unchanged message field and that will tell you what decoded. Then look
+at some of the fields on the left and notice they have decoded realtime ie. they are in the doc. Now to
+take this a step further we could reference these fields directly. I would only caution that your code be 
+written so you take actions when the field in question exists only. The sky is the limit for your designs.
+You need only know to some degree what your objective is and what can be found in each type of log you 
+might ingest. This takes practice and  experimentation.
+
+This assumes the logs have some design in mind, they are json. In some cases you have totally raw logs.
+These require ripping apart to get fields. If you know user login is in a raw log you have to design a 
+regex type operation that once it identies this is the right type log pulls out that substring and creates
+a new field for it. Then forever more those type of doc will have thiis extra user field.
+
+---
 
 ## This is how output stage updates Elastic index
 
