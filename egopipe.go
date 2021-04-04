@@ -64,7 +64,7 @@ func main() {
 	// is it a secure transaction?
 	//
     if Secure := strings.HasPrefix(p["Target"],"https"); Secure {
-		caCert, err := ioutil.ReadFile("ego/cert.pem")
+		caCert, err := ioutil.ReadFile(PipeDir + "/ego/cert.pem")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -95,7 +95,7 @@ func main() {
 	for {
 		// Read from pipe
 		//
-		slice, _ := (*reader).ReadBytes('\n')
+		slice, err := (*reader).ReadBytes('\n')
 		if err != nil  {
 			fmt.Printf("Returned data does not end in delimiter: %v", err)
 			os.Exit(3)
@@ -123,7 +123,7 @@ func main() {
 		resp := <-r
 
 		log.Println("response from output", resp.Message, resp.Error)
-		if err != nil {
+		if resp.Error != nil {
 			os.Exit(3)
 		}
 

@@ -1,7 +1,7 @@
 package main
 
 import "encoding/json"
-import "fmt"
+import "log"
 import "io/ioutil"
 
 
@@ -22,16 +22,16 @@ func getConf() (map[string]string, error) {
 
     // Read config file from install directory
     //
-	file, err := ioutil.ReadFile("ego/" + ConfigName)
+	file, err := ioutil.ReadFile(PipeDir + "/ego/" + ConfigName)
 
 	if err != nil { // soft error
-		fmt.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
+		log.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
 		return m, err
 
 	} else {
 
-                // json to map
-                //
+        // json to map
+        //
 		err = json.Unmarshal(file, &n)
 		if err != nil {
 			return m, err

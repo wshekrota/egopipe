@@ -96,7 +96,7 @@ What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf.
 ---
 
     - filebeat as input (queuing) recommend spool, default is memory 4096. 
-    - egopipe config file should be copied to /etc/logstash/conf.d to claim elastic host target.
+    - egopipe config file should be copied to /etc/logstash/conf.d/ego to claim elastic host target.
     - logstash jvm.options config in /etc/logstash should have upper memory set as in ..Xmx2g
     - you have configured the rest of your elastic cluster as in the appropriate document *
 
@@ -130,7 +130,7 @@ filter {
 }
 output {
    pipe {
-      command => "/etc/logstash/conf.d/egopipe"
+      command => "/etc/logstash/conf.d/ego/egopipe"
    }
 }
 
@@ -141,30 +141,47 @@ can decode and process that doc. Decoded we have a map which is very easy to man
 When done we encode the map back to json. Ultimately we  put the annotated doc in an elastic index by way of an API call. 
 
 
-## The Nitty Gritty (or how do I write the filter section in go)
+## Transform stage or The Nitty Gritty (or how do I write the filter section in go)
 
+This is where you take action on all or selectively some of the docs passing through the pipeline.
+Forget the idea of plugins. Now you will effect changes in a go like manner. You will find it easy 
+to do some things in a manner very similar to the comparitive logstash plugin or in many cases 
+invent some new process.
+I highly advise that we carry forward some of the same practices that made our pipe more easily 
+debugable. Most forward in my mind is tag. Pipes are a form of headless operation thus difficult
+to debug. Setting eye catchers is something you can design into your code. In logstash I had a tag 
+for every nook and cranny. If something went wrong with specific logic I could look for the tag 
+associated with it and find its fields using kibana. This is an indespensible practice.
+Not every thing you will do needs to be documented here obviously. This is meant to get you started.
+
+### Create a field or tag
+```
+h["tag"] = "DescriptiveAreaOfYourCode"
 ```
 
-The logstash pipe filter section used to just be Ruby like code. Now the filter section or stage2 
+### Does a field exist?
+```
+if _, ok := h["fieldname"]; ok {
+  code for  field exist
+} else
+```
 
-of egopipe may be written in go. Of course when done egopipe must be compiled then copied to 
+### Delete a field
+```
+delete(h,"fieldname")
+```
 
-'/etc/logstash/conf.d'. The doc object is the map 'h' so there will be many operations you can 
+### JSON decode (no prefixing string)
+```
+json.Unmarshal([]byte(h["message"].(string)),&h)
+```
 
-perform similar to their logstash equivalents that I will document below.
-
-
-h["name"] = "this is a test"  // add a field
-
-delete(h,"key")               // delete a field
-
-json.Unmarshal([]byte(h[key].(string)),&h)     // decode a json value for a key
-
-                              // this processes top level json prefixed by non json
-idx := strings.IndexRune(h["message"].(string),'{')   // json convert of message
+### JSON field (which has prefix not JSON will be left alone)
+```
+idx := strings.IndexRune(h["message"].(string),'{')
 if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
-
 ```
+
 
 ## This is how output stage updates Elastic index
 
@@ -231,7 +248,7 @@ Entire pipe is golang so transform or filter stage is familiar.
 ```
 
 Enabling TLS on an Elastic transaction is a two fold process. We must setup TLS over the http
-connection. So we copy the ca cert to the /etc/logstash/conf.d along with the egopipe executable
+connection. So we copy the ca cert to the /etc/logstash/conf.d/ego along with the egopipe executable
 and conf file. The conf file MUST contain a target that specifies https not http and a user
 and password to authenticate. Both TLS and authentication are a requirement.
 
@@ -301,5 +318,7 @@ add metrics as a rest API call... GET metrics?
 evaluate debug function output
 
 now that I have a working model refactor code into separate files organized within package (complete 03/28)
+
+refactor pipe read to read all before process so map[string]interface{} becomes []map....
 
 ---
