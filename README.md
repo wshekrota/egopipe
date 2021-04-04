@@ -154,29 +154,29 @@ for every nook and cranny. If something went wrong with specific logic I could l
 associated with it and find its fields using kibana. This is an indespensible practice.
 Not every thing you will do needs to be documented here obviously. This is meant to get you started.
 
-### Create a field or tag
+##### Create a field or tag
 ```
 h["tag"] = "DescriptiveAreaOfYourCode"
 ```
 
-### Does a field exist?
+##### Does a field exist?
 ```
 if _, ok := h["fieldname"]; ok {
   code for  field exist
 } else
 ```
 
-### Delete a field
+##### Delete a field
 ```
 delete(h,"fieldname")
 ```
 
-### JSON decode (no prefixing string)
+##### JSON decode (no prefixing string)
 ```
 json.Unmarshal([]byte(h["message"].(string)),&h)
 ```
 
-### JSON field (which has prefix not JSON will be left alone)
+##### JSON field (which has prefix not JSON will be left alone)
 ```
 idx := strings.IndexRune(h["message"].(string),'{')
 if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
