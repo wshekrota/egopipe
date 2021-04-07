@@ -115,8 +115,8 @@ func main() {
 		go yourpipecode(Hash, c) // stage 2
 
 		// return pointer to internal map
-                // if channel not returned will block here
-                //
+        // if channel not returned will block here
+        //
 		pstg2map := <-c 
 
 		go output(client, ds, p, pstg2map, r) // stage 3

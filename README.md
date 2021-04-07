@@ -56,19 +56,28 @@ Uses maps to individually union the defaults with config file settings.
 
 ---
 
-## installation
+## installation and or testing the pipe
 
 ---
+
+Clone the repo down and make changes to the transform stage 'yourpipecode'. Compile 
+it and start the setup process by copying the mentioned files to the logstash directory.
+If you need simple testing deployment consider using containers. I have sample Dockerfiles
+in my egopipe_containers repo on my github account. These will build a cache for you so 
+you can restart containers at will. Remember stopping and starting again destroys the 
+existing index(s).
 
 The egopipe install directory is /etc/logstash/conf.d. But we have to put the non 
 pipe files out of logstash reach creating an ego sub directory there.
 After compiling the binary which allows you to add go code in filter section, place
-it here.(in ego) Along with it will reside egopipe.conf which is json. Note the hostnames
-here assume you followed the elastic documentation in naming the hosts etc.
+it here.(in ego) Along with it will reside egopipe.cfg which is json. Note the hostnames
+here assume you followed the elastic documentation in naming the hosts etc. Or you can
+use ip addresses, especially if configuring it insecure or no ssl. The pipeline.conf file 
+is just a stripped down logstash pipe that inputs and calls pipe to launch my code.
 
 ```
 
-Content example for egopipe.conf
+Content example for egopipe.cfg
 
 { "Target": "https://node-1.elastic.test.com:9200","User":"elastic","Password":"pw" }
 
@@ -88,6 +97,15 @@ What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf.
 * pipeline.conf (conf.d)
 * ca cert (conf.d/ego) following the elastic cert instructions you get a ca.crt which you rename to ca.pem
 
+You can make this deploy simpler if using containers your Dockefile can copy these files
+in place. This is the way I'm doing my testing. You can check these out on another repo
+at my github account. I think you might also put links to your clone in the Dockerfile 
+directory that is if you originally build the cache with them
+
+Since I am not testing Elasticsearch I only built a single node elastic. Obviously you could take 
+that single node container and build it to a multinode k8s cluster. I'll ignore that 
+for the purpose of this document.
+
 ---
 
 
@@ -100,7 +118,7 @@ What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf.
     - logstash jvm.options config in /etc/logstash should have upper memory set as in ..Xmx2g
     - you have configured the rest of your elastic cluster as in the appropriate document *
 
-[great elastic document](https://www.elastic.co/blog/configuring-ssl-tls-and-https-to-secure-elasticsearch-kibana-beats-and-logstash#prepare-logstash)
+[great elastic document](https://www.elastic.co/blog/configuring-ssl-tls-and-https-to-secure-elasticsearch-kibana-beats-and-logstash#prepare-logstash) *
 
 ---
 
@@ -136,9 +154,10 @@ output {
 
 ```
 
-On the output side of logstash what we get is JSON for the docs traveling through the pipelines. Then entering the go code we 
-can decode and process that doc. Decoded we have a map which is very easy to manipulate in golang.
-When done we encode the map back to json. Ultimately we  put the annotated doc in an elastic index by way of an API call. 
+On the output side of logstash what we get is JSON for the docs traveling through the pipelines. 
+Then entering the go code we can decode and process that doc. Decoded we have a map which is very 
+easy to manipulate in golang. When done we encode the map back to json. Ultimately we  put the 
+annotated doc in an elastic index by way of an API call. 
 
 
 ## Transform stage or The Nitty Gritty (or how do I write the filter section in go)
