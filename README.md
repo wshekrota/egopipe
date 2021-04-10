@@ -85,7 +85,10 @@ Content example for egopipe.cfg
 
 ```
 
-If securing the cluster follow those rules below copying the cert to this same 
+Input will be coming from filebeats (I assume) installed on your application. Configure filebeats
+to send the selected logs to port 5000 of the host where you have logstash running.
+
+If securing the cluster follow those elastic instructions below copying the cert to this same 
 directory as ca.pem. If the egopipe.conf file exists here egopipe reads it and prioritizes 
 its items over the default values. Last thing is the suggested logstash pipeline.conf 
 file whose output stage invokes egopipe. Place it in the conf.d directory.
@@ -100,7 +103,7 @@ What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf.
 You can make this deploy simpler if using containers your Dockefile can copy these files
 in place. This is the way I'm doing my testing. You can check these out on another repo
 at my github account. I think you might also put links to your clone in the Dockerfile 
-directory that is if you originally build the cache with them
+directory that is if you originally built the cache with them.
 
 Since I am not testing Elasticsearch I only built a single node elastic. Obviously you could take 
 that single node container and build it to a multinode k8s cluster. I'll ignore that 
@@ -327,14 +330,15 @@ example doc: (json)
 
 ```
 
-These metrics give you a realtime look at what might be happening with your data. If you want something more exotic you should use Kibana. Figures are post filter so additions/deletions will be seen.
+These metrics give you a realtime look at what might be happening with your data. If you want 
+something more exotic you should use Kibana. Figures are post filter so additions/deletions will be seen.
 
 Elapsed - rough estimate time after read/decode to write index success (end to end)
 Bytes - total bytes transit
 Docs - total doc count
-Fields - map is docs grouped by number of fields per doc and count within, this gives you a rough idea what is coming in and 
-what is done in the filter.
-docFields - number fields this doc
+Fields - map is docs grouped by number of fields per doc and count within ex: map[27:2,11:14] would be there are 2 docs w/27 fields etc. 
+
+* this gives you a rough idea what is coming in and what is done in the filter.
 
 Rest endpoint (todo maybe)
 GET list - all docs
