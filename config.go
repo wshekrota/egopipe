@@ -6,12 +6,10 @@ import "io/ioutil"
 
 
 
-// Manage config file for pipe setup.
-// Where is elasticsearch, core name for index and who authenticates?
-func getConf() (map[string]string, error) {
+// configLayer manages config file for pipe setup.
+// Overlay read file on top of defaults resulting in at least read settings.
+func configLayer(n map[string]string) (map[string]string) {
 
-	var n map[string]interface{}
-	
 	// set known defaults here .. insecure
 	//
 	m := map[string]string{
@@ -20,30 +18,50 @@ func getConf() (map[string]string, error) {
 			"User": "",
 			"Password": ""}
 
-    // Read config file from install directory
-    //
-	file, err := ioutil.ReadFile(PipeDir + "/ego/" + ConfigName)
-
-	if err != nil { // soft error
-		log.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
-		return m, err
-
-	} else {
-
-        // json to map
-        //
-		err = json.Unmarshal(file, &n)
-		if err != nil {
-			return m, err
-		}
-
-		// map overlay defaults
-		//
-		for key, val := range n {
-			m[key] = val.(string)
-		}
-
+	// map overlay defaults
+	//
+	for key, val := range n {
+		m[key] = val
 	}
-	return m, nil
+
+	return m
 }
 
+// configRead reads local json config file.
+// Then it returns a decoded map.
+func configRead() (map[string]string, error) {
+
+	var m,n  map[string]string  // zero value
+
+    // Read config file from install directory
+    //
+    file, err := ioutil.ReadFile(PIPE_DIR + "/ego/" + CONFIG_NAME)
+
+    if err != nil { // soft error
+        log.Printf("Egopipe config Get file error #%v, Defaults used. ", err)
+        return m, err
+
+    } 
+
+    // json to map
+    //
+    err = json.Unmarshal(file, &n)
+    if err != nil {
+        return m, err
+    }
+
+    return n, nil
+
+}
+
+// getConf call to get config info from file and layer it with defaults
+func getConf() map[string]string {
+
+    // Returns zero value or decode
+    //
+	read, _ := configRead()
+
+    // Returns overlay
+    return configLayer(read)
+
+}

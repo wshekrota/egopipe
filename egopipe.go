@@ -1,3 +1,4 @@
+// Wanting simplicity in elastic data ingestion I created this so go could be used instead of plugins.
 package main
 
 import "io/ioutil"
@@ -6,8 +7,8 @@ import "net/http"
 import "log"
 import "os"
 import "encoding/json"
-import "fmt"
 import "strings"
+import "fmt"
 import "time"
 import "crypto/tls"
 import "crypto/x509"
@@ -41,14 +42,10 @@ func main() {
 	// Read config options
 	//
 
-	p, err := getConf()
+	p := getConf()
 
+	err := setLog()
 	if err != nil {
-		log.Fatalf("Egopipe config Unmarshal error: %v", err)
-	}
-
-	res := setLog()
-	if res != nil {
 		log.Fatalf("Egopipe config setLog error: %v", err)
 		os.Exit(28)
 	}
@@ -64,7 +61,7 @@ func main() {
 	// is it a secure transaction?
 	//
     if Secure := strings.HasPrefix(p["Target"],"https"); Secure {
-		caCert, err := ioutil.ReadFile(PipeDir + "/ego/cert.pem")
+		caCert, err := ioutil.ReadFile(PIPE_DIR + "/ego/cert.pem")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -107,19 +104,14 @@ func main() {
 		}
 		now := time.Now().UTC()
 
-		// Save datestamp for output stage
-		//
-		ds := strings.SplitN(Hash["@timestamp"].(string), "T", 2)[0]
-		ds = strings.Replace(ds, "-", ".", 2)
-
-		go yourpipecode(Hash, c) // stage 2
+		go yourPipeCode(Hash, c) // stage 2
 
 		// return pointer to internal map
         // if channel not returned will block here
         //
 		pstg2map := <-c 
 
-		go output(client, ds, p, pstg2map, r) // stage 3
+		go output(client, p, pstg2map, r) // stage 3
 		resp := <-r
 
 		log.Println("response from output", resp.Message, resp.Error)

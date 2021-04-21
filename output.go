@@ -6,7 +6,7 @@ import "fmt"
 import "bytes"
 import "encoding/base64"
 import "io/ioutil"
-
+import "strings"
 
 
 /*
@@ -24,9 +24,8 @@ type Result struct {
 }
 
 // Function: output manages the docs output to an index.
-// Passed: client structure, date string for index name, config map, ref to stage2 map, channel to return struct
-
-func output(client *http.Client, dateof string, c map[string]string, hp *map[string]interface{}, r chan Result) {
+// Passed: client structure, config map, ref to stage2 map, channel to return struct
+func output(client *http.Client, c map[string]string, hp *map[string]interface{}, r chan Result) {
 
 	var s Result
 
@@ -35,6 +34,10 @@ func output(client *http.Client, dateof string, c map[string]string, hp *map[str
 		s.Message = fmt.Sprintf("Egopipe input Marshal error: %v", err)
 		s.Error = err
 	} else {
+	    // reformat date for indexname
+	    //
+	    dateof := strings.SplitN((*hp)["@timestamp"].(string), "T", 2)[0]
+        dateof = strings.Replace(dateof, "-", ".", 2)
 		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
 
 		// post request

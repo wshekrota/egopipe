@@ -64,8 +64,8 @@ Clone the repo down and make changes to the transform stage 'yourpipecode'. Comp
 it and start the setup process by copying the mentioned files to the logstash directory.
 If you need simple testing deployment consider using containers. I have sample Dockerfiles
 in my egopipe_containers repo on my github account. These will build a cache for you so 
-you can restart containers at will. Remember stopping and starting again destroys the 
-existing index(s).
+you can start containers at will. Remember stopping and starting again destroys the 
+existing index(s). (for now)
 
 The egopipe install directory is /etc/logstash/conf.d. But we have to put the non 
 pipe files out of logstash reach creating an ego sub directory there.
@@ -85,20 +85,22 @@ Content example for egopipe.cfg
 
 ```
 
-Input will be coming from filebeats (I assume) installed on your application. Configure filebeats
-to send the selected logs to port 5000 of the host where you have logstash running.
+Input will be coming from filebeats installed on your application. (which is gitlab in this 
+case for me) Configure filebeats to send the selected logs to port 5000 of the host where you 
+have logstash running.
 
 If securing the cluster follow those elastic instructions below copying the cert to this same 
 directory as ca.pem. If the egopipe.conf file exists here egopipe reads it and prioritizes 
 its items over the default values. Last thing is the suggested logstash pipeline.conf 
 file whose output stage invokes egopipe. Place it in the conf.d directory.
 
-What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf.
+What belongs in /etc/logstash/conf.d/ego? Everything but pipeline.conf and .yml file.
 
 * executable (conf.d/ego)
 * configuration file (conf.d/ego)
 * pipeline.conf (conf.d)
 * ca cert (conf.d/ego) following the elastic cert instructions you get a ca.crt which you rename to ca.pem
+* logstash.yml (/etc/logstash)
 
 You can make this deploy simpler if using containers your Dockefile can copy these files
 in place. This is the way I'm doing my testing. You can check these out on another repo
@@ -107,7 +109,8 @@ directory that is if you originally built the cache with them.
 
 Since I am not testing Elasticsearch I only built a single node elastic. Obviously you could take 
 that single node container and build it to a multinode k8s cluster. I'll ignore that 
-for the purpose of this document.
+for the purpose of this document. I built the containers elasticsearch first then logstash
+so I could guess the IP addresses 172.17.0.2 being first then 3 etc. (by default behavior)
 
 ---
 
@@ -130,7 +133,7 @@ for the purpose of this document.
 
 ---
 
-Functional - currently in testing
+Functional - Beta version distribution
 
 ---
 
@@ -215,6 +218,45 @@ idx := strings.IndexRune(h["message"].(string),'{')
 if idx>0 { json.Unmarshal([]byte((h["message"].(string))[idx:]),&h) }
 ```
 
+### Suggested patterns for coding
+```
+A map is the object flowing through your pipe. This is decoded json. When you write
+code here it may be difficult to decode the runtume version because pipes are headless.
+In difficult times it may be helpful to use log.Println() to give you clues in the log 
+at "/var/log/logstash/egopipe". Also I would consider defining a group of constant like
+flags ie all camelcase to set the value for field tags. Tags is an array so append 
+will work.
+
+Where json was decoded as above...
+H is defined map[string]interface{} as it is output from unmarshal. 
+Likely tags field is already defined coming into the pipeline at filebeat, so you may 
+append to it like this .. Perhaps you want to check does tags exist? Always be sure 
+you are not operating on unintended docs flowing through your pipe. If you do, the runtime 
+will obviously panic.
+If we were to use "log.file.path" to be sure log was "/var/log/gitlab/gitaly/current"
+it would make life more safe. You could also check for the existance of "tags" field 
+using a suggestion above.
+But never fear it gets more complex with fields using the '.' being submapped.
+ie log.file.path would be defined by map["log":map["file":map["path":string ....
+
+    x := h["log"].(map[string]interface{})
+    y := x["file"].(map[string]interface{})
+    z := y["path"].(string)
+    if z == "/var/log/gitlab/gitaly/current" {
+		h["tags"] = append(h["tags"].([]string),"DecodedJsonToFields")
+	}
+
+ or if tags does not exist
+
+h["tags"] = []string{"DecodedJsonToFields"}
+
+I'm going to make a future item to create something to make adding tags super easy.
+
+Note: I have asserted that tags value is an array of string.
+Then later when looking at the pipeline data created in Kibana you will know what happened
+in that doc.
+```
+
 ## An example decode application in egopipe using gitlab logs
 
 ---
@@ -233,8 +275,23 @@ might ingest. This takes practice and  experimentation.
 
 This assumes the logs have some design in mind, they are json. In some cases you have totally raw logs.
 These require ripping apart to get fields. If you know user login is in a raw log you have to design a 
-regex type operation that once it identies this is the right type log pulls out that substring and creates
-a new field for it. Then forever more those type of doc will have thiis extra user field.
+regex type operation that once it identifies this is the right type log pulls out that substring and creates
+a new field for it. Then forever more those type of doc will have this extra user field.
+
+Consider that  once you have all these new fields created, in this gitlab case want to identify some 
+operation like repo create? I know  that this gitaly log contains this from previous experimentation.
+So I created a search in kibana that would identify that one operation. This is actually a combination
+of an exact match identified by the use of 'keyword' (or non analyzed field) and a full text search
+"CreateRepository". Be as specific as necessary, I prefer exact matches they are much faster.
+
+```
+grpc.request.glProjectPath.keyword:"wshek/newone11" AND "CreateRepository"
+```
+
+Once we are ingesting a given log we can then go to Kibana and experiment with fields to figure out 
+what magic gives us what we want in result. It might be that when we identify some specific condition
+we make things easier by creating a field in that specific timed doc. It's all a matter of design.
+Should we do our work in Kibana or annotate the doc realtime in the pipe to make later operations easier?
 
 ---
 
@@ -313,6 +370,9 @@ and password to authenticate. Both TLS and authentication are a requirement.
 
 ## Testing egopipe
 
+Integrated go testing tests included in repository. Tests config file and output stage so far.
+
+Alternate test
 ```
 Echo some JSON into the executable..
 
@@ -376,5 +436,10 @@ evaluate debug function output
 now that I have a working model refactor code into separate files organized within package (complete 03/28)
 
 refactor pipe read to read all before process so map[string]interface{} becomes []map....
+
+suggestion of persistence (since that would be outside egopipe code in elastic)
+
+rethink index name defaults this may interfere with what is expected
+
 
 ---
