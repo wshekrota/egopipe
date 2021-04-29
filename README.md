@@ -250,12 +250,46 @@ ie log.file.path would be defined by map["log":map["file":map["path":string ....
 
 h["tags"] = []string{"DecodedJsonToFields"}
 
-I'm going to make a future item to create something to make adding tags super easy.
-
 Note: I have asserted that tags value is an array of string.
 Then later when looking at the pipeline data created in Kibana you will know what happened
 in that doc.
 ```
+
+### Extras - functions for transform stage
+
+
+```
+### dotField (h map[string]interface{}, field string)
+
+Process fieldnames that have '.'. Some are simply field:value.
+Others are submapped as "log.file.path" being map["log":map["file":map["path"]]].
+
+```
+
+
+```
+### addTags(doc *map[string]interface{}, tags []string)
+
+Add array of tags to doc. This lets you annotate different sections of code in data so 
+that you can go back and make the association with some bad data.
+
+```
+
+```
+### oniguruma(new_field string, field string, h map[string]interface{}, regex string)
+
+Create new field from regex capture..
+
+```
+
+
+```
+### grok(h *map[string]interface{}, regex string)
+
+Create fields from patterns defined by %{syntax:semantic} patterns
+
+```
+
 
 ## An example decode application in egopipe using gitlab logs
 

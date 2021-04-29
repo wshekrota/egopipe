@@ -50,7 +50,6 @@ func main() {
 		os.Exit(28)
 	}
 
-	var Hash map[string]interface{}
 	c := make(chan *map[string]interface{})
 	r := make(chan Result)
 	totals := Metrics{}
@@ -90,6 +89,8 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
+		var Hash map[string]interface{}
+
 		// Read from pipe
 		//
 		slice, err := (*reader).ReadBytes('\n')
