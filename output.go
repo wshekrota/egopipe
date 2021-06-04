@@ -8,7 +8,6 @@ import "encoding/base64"
 import "io/ioutil"
 import "strings"
 
-
 /*
 
    stage 3
@@ -16,7 +15,6 @@ import "strings"
    Runs as a goroutine to concurrently manage the security and output of the doc.
 
 */
-
 
 type Result struct {
 	Message string
@@ -34,10 +32,10 @@ func output(client *http.Client, c map[string]string, hp *map[string]interface{}
 		s.Message = fmt.Sprintf("Egopipe input Marshal error: %v", err)
 		s.Error = err
 	} else {
-	    // reformat date for indexname
-	    //
-	    dateof := strings.SplitN((*hp)["@timestamp"].(string), "T", 2)[0]
-        dateof = strings.Replace(dateof, "-", ".", 2)
+		// reformat date for indexname
+		//
+		dateof := strings.SplitN((*hp)["@timestamp"].(string), "T", 2)[0]
+		dateof = strings.Replace(dateof, "-", ".", 2)
 		url := fmt.Sprintf("%s/log-%s-%s/_doc/", c["Target"], c["Name"], dateof)
 
 		// post request

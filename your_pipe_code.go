@@ -1,7 +1,9 @@
 package main
 
-//import "log"
+//import "fmt"
+import "regexp"
 import "encoding/json"
+//import "strings"
 
 /*
 
@@ -20,16 +22,48 @@ func yourPipeCode(h map[string]interface{}, c chan *map[string]interface{}) {
 	// value is interface{} and must be asserted
 
 	// Access log.file.path value
+	// Legacy field
 	//
 	p := dotField(h, "log.file.path").(string)
-	
-	if p == "/var/log/gitlab/gitaly/current" {
+
+
+	if "/var/log/gitlab/gitaly/current" == p {
+
 		json.Unmarshal([]byte(h["message"].(string)), &h)
 		addTags(&h, []string{"DecodedJsonToFields"})
-		oniguruma("justtime", "time", &h, `(T[0-9:Z]+$)`)
-	}
-	if p == "/var/log/syslog" {
-		grok(&h, `%{(?P<a>\S+):field1} %{(?P<a>\S+):field2} %{(?P<a>\S+):} %{(?P<a>\S+):field4} %{(?P<a>\S+):field5}`)
+
+		_, ok := h["grpc.code"]  // key exists
+		isClone := regexp.MustCompile(`(SSH|Post)UploadPack`)
+		isPush := regexp.MustCompile(`(SSH|InfoRef)ReceivePack`)
+		isWikiRepo := regexp.MustCompile(`.wiki.git$`)
+
+		// clone 
+		if isClone.MatchString(h["grpc.method"].(string)) && ok && h["grpc.code"].(string) == "OK" {
+			h["repo"] = h["grpc.request.glProjectPath"].(string)
+			oniguruma("owner", "repo", &h, "([a-zA-Z0-9_-]+)(?:/*)")
+			h["git_ops"] = "clone"
+			h["ops_duration"] = h["grpc.time_ms"].(float64)
+
+			// push 
+		} else if isPush.MatchString(h["grpc.method"].(string)) && ok && h["grpc.code"].(string) == "OK" {
+			h["repo"] = h["grpc.request.glProjectPath"].(string)
+			oniguruma("owner", "repo", &h, "([a-zA-Z0-9_-]+)(?:/*)")
+			h["git_ops"] = "push"
+			h["ops_duration"] = h["grpc.time_ms"].(float64)
+
+			// create
+		} else if h["grpc.method"] == "CreateRepository" && !isWikiRepo.MatchString(h["grpc.request.repoPath"].(string)) &&
+			ok && h["grpc.code"].(string) == "OK" {
+			h["repo"] = h["grpc.request.glProjectPath"].(string)
+			oniguruma("owner", "repo", &h, "([a-zA-Z0-9_-]+)(?:/*)")
+			h["git_ops"] = "create"
+
+			// delete
+		} else if h["grpc.method"] == "RemoveRepository" && !isWikiRepo.MatchString(h["grpc.request.repoPath"].(string)) &&
+			ok && h["grpc.code"].(string) == "OK" {
+			h["git_ops"] = "delete"
+		}
+
 	}
 
 	c <- &h // Although you write code here this line is required

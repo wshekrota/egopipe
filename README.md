@@ -3,8 +3,8 @@
 ### What is Egopipe?
 
 Conventional ETL minimalist pipeline written in Go for Elasticstack. Basically it extends the pipeline 
-capability of logstash giving you a go environment to manipulate your doc. It has a minimalist approach 
-to configuring, stop living with complexity
+capability of logstash giving you a go environment to manipulate your doc using go. It has a minimalist approach 
+to configuring, stop living with complexity.
 
 Format: ![egopipe logo](https://www.google.com/imgres?imgurl=https%3A%2F%2Fgolangforall.com%2Fassets%2Ftube2.svg&imgrefurl=https%3A%2F%2Fgolangforall.com%2Fen%2Fgopher-drawings.html&tbnid=OMB0gw9yicfL9M&vet=10CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE..i&docid=Ges437lBH6SG0M&w=800&h=519&q=golang%20gopher%20graphics&client=ubuntu&ved=0CO0BEDMomwNqFwoTCODfsYGJte8CFQAAAAAdAAAAABAE)
 
@@ -30,6 +30,10 @@ I chose to let logstash receive the input and launch my pipe. Little changes and
 intuitive. The only thing you change is a small json config file and add a cert to the directory
 if running securely. 
 
+Also as a feature I read data with or without EOF changing the behavior of the pipe to shutdown when done.
+This is achieved using a goroutine to read each doc. A select then either claims more data to process or 
+alternatively times out so exit can happen. The behavior of filebeat was to leave the pipe open which I dis-
+agree with.
 
 ## config file management
 
@@ -43,6 +47,7 @@ Uses maps to individually union the defaults with config file settings.
 
 
 ```
+key:value							default
 
 "target": protocol:hostname:port 	http:127.0.0.1:9200
 
@@ -50,7 +55,7 @@ Uses maps to individually union the defaults with config file settings.
 
 "user": user if secured				""
 
-"password": password if secured     ""
+"password": password if secured		""
 
 ```
 
@@ -258,74 +263,50 @@ in that doc.
 ### Extras - functions for transform stage
 
 
-```
 ### dotField (h map[string]interface{}, field string)
-
-Process fieldnames that have '.'. Some are simply field:value.
+```
+Process fieldnames that have '.' which occurs with legacy fields. Some are simply field:value.
 Others are submapped as "log.file.path" being map["log":map["file":map["path"]]].
+This method provides this check and returns the value via interface so as to 
+be like other data. You must assert the type of data you are expecting. ex: log.file.path
 
 ```
 
 
-```
 ### addTags(doc *map[string]interface{}, tags []string)
-
+```
 Add array of tags to doc. This lets you annotate different sections of code in data so 
 that you can go back and make the association with some bad data.
 
 ```
 
-```
+
 ### oniguruma(new_field string, field string, h map[string]interface{}, regex string)
-
-Create new field from regex capture..
+```
+Create new field from regex capture field in question. Returns true/false indication
+of success.
 
 ```
 
 
+### grok(h *map[string]interface{}, regex string) bool
 ```
-### grok(h *map[string]interface{}, regex string)
-
-Create fields from patterns defined by %{syntax:semantic} patterns
+Create fields from pattern defined by %{syntax:semantic} patterns.
+Skip fields by leaving out the semantic name. Function returns bool
+true/false so that you can selectively warn of failure.
 
 ```
 
 
-## An example decode application in egopipe using gitlab logs
+## Some examples of Egopipe usage
 
 ---
 
-By filebeat feeding ../gitlab/gitaly logs  to our logstash we can experiment. The gitaly logs are completely 
-json and we can use the top Unmarshal line above to decode the message into fields.
+[mail data collection](https://github.com/wshekrota/egopipe_mail
 
-![kibana_screen](https://github.com/wshekrota/egopipe/blob/main/jsondecode.png)
+and 
 
-In this screen you can look at the unchanged message field and that will tell you what decoded. Then look
-at some of the fields on the left and notice they have decoded realtime ie. they are in the doc. Now to
-take this a step further we could reference these fields directly. I would only caution that your code be 
-written so you take actions when the field in question exists only. The sky is the limit for your designs.
-You need only know to some degree what your objective is and what can be found in each type of log you 
-might ingest. This takes practice and  experimentation.
-
-This assumes the logs have some design in mind, they are json. In some cases you have totally raw logs.
-These require ripping apart to get fields. If you know user login is in a raw log you have to design a 
-regex type operation that once it identifies this is the right type log pulls out that substring and creates
-a new field for it. Then forever more those type of doc will have this extra user field.
-
-Consider that  once you have all these new fields created, in this gitlab case want to identify some 
-operation like repo create? I know  that this gitaly log contains this from previous experimentation.
-So I created a search in kibana that would identify that one operation. This is actually a combination
-of an exact match identified by the use of 'keyword' (or non analyzed field) and a full text search
-"CreateRepository". Be as specific as necessary, I prefer exact matches they are much faster.
-
-```
-grpc.request.glProjectPath.keyword:"wshek/newone11" AND "CreateRepository"
-```
-
-Once we are ingesting a given log we can then go to Kibana and experiment with fields to figure out 
-what magic gives us what we want in result. It might be that when we identify some specific condition
-we make things easier by creating a field in that specific timed doc. It's all a matter of design.
-Should we do our work in Kibana or annotate the doc realtime in the pipe to make later operations easier?
+[gitlab process auditing](https://github.com/wshekrota/gitlab
 
 ---
 
@@ -406,7 +387,12 @@ and password to authenticate. Both TLS and authentication are a requirement.
 
 Integrated go testing tests included in repository. Tests config file and output stage so far.
 
-Alternate test
+Alternate test - can be invoked in container. 
+'docker ps' to get container id
+'docker exec -it <container-id> bash'
+Verify config at /etc/logstash/conf.d/egopipe. 
+Then check for output using Kibana ar http://172.17.0.4:5601.
+
 ```
 Echo some JSON into the executable..
 

@@ -2,13 +2,13 @@
 package main
 
 import "io/ioutil"
+import "io"
 import "bufio"
 import "net/http"
 import "log"
 import "os"
 import "encoding/json"
 import "strings"
-import "fmt"
 import "time"
 import "crypto/tls"
 import "crypto/x509"
@@ -25,7 +25,6 @@ import "crypto/x509"
 
 */
 
-
 type Metrics struct {
 	Bytes   int
 	Docs    int
@@ -33,10 +32,14 @@ type Metrics struct {
 	Elapsed time.Duration
 }
 
+type Ret struct {
+	slice []byte
+	err   error
+}
 
-// The main contols the pipe in am ETL fashion. SSL and authentication is also handled for elastic host.
+// The main contols the pipe in an ETL fashion. SSL and authentication is also handled for elastic host.
 // Read stdin, amend the doc, output to index
-// Delivers ent to end statistics in log so you can assess response time.
+// Delivers end to end statistics in log so you can assess response time.
 func main() {
 
 	// Read config options
@@ -54,12 +57,12 @@ func main() {
 	r := make(chan Result)
 	totals := Metrics{}
 	totals.Fields = make(map[int]int)
-    var client *http.Client
+	var client *http.Client
 
 	// Read cert in
 	// is it a secure transaction?
 	//
-    if Secure := strings.HasPrefix(p["Target"],"https"); Secure {
+	if Secure := strings.HasPrefix(p["Target"], "https"); Secure {
 		caCert, err := ioutil.ReadFile(PIPE_DIR + "/ego/cert.pem")
 		if err != nil {
 			log.Fatal(err)
@@ -77,56 +80,73 @@ func main() {
 			},
 		}
 
-    // or it is unsecure transaction ie http
-    //
-    } else { 
+		// or it is unsecure transaction ie http
+		//
+	} else {
 		client = &http.Client{}
-    }
+	}
 
 	// Read json from stdin passed from null logstash pipe
 	//
 
-	reader := bufio.NewReader(os.Stdin)
+	log.Println("Start pipe.")
+	lineFromPipe := make(chan Ret, 1)  // buffered
+	reader := bufio.NewScanner(os.Stdin)
+	var retData Ret
 
+PipeLoop:
 	for {
-		var Hash map[string]interface{}
+		go func(x chan Ret) {
+			if reader.Scan() {
+				x <- Ret{reader.Bytes(), reader.Err()}
+			}
+		}(lineFromPipe)
 
-		// Read from pipe
+		// Alternative - pipe end w/ timeout or EOF
 		//
-		slice, err := (*reader).ReadBytes('\n')
-		if err != nil  {
-			fmt.Printf("Returned data does not end in delimiter: %v", err)
-			os.Exit(3)
+		select {
+		case retData = <-lineFromPipe:
+
+			log.Println("New line.", string(retData.slice), retData.err)
+			now := time.Now().UTC()
+			Hash := map[string]interface{}{}
+
+			if err := json.Unmarshal(retData.slice, &Hash); err != nil {
+				log.Printf("Egopipe input Unmarshal error: %v", err)
+				continue PipeLoop
+			}
+
+			go yourPipeCode(Hash, c) // stage 2
+
+			// return pointer to internal map
+			// if channel not returned will block here
+			//
+			pstg2map := <-c
+
+			go output(client, p, pstg2map, r) // stage 3
+			resp := <-r
+
+			log.Println("response from output", resp.Message, resp.Error)
+			if resp.Error != nil {
+				break PipeLoop
+			}
+
+			totals.Elapsed = time.Since(now)
+			totals.Docs++
+			totals.Bytes += len(resp.Message)
+			(totals.Fields)[len(*pstg2map)]++
+
+			log.Println("metrics:", totals)
+		case <-time.After(1 * time.Second):
+			log.Println("Break pipe timeout.")
+			break PipeLoop
+		}
+		if retData.err == io.EOF {
+			log.Println("Break pipe eof.")
+			break PipeLoop
 		}
 
-		if err := json.Unmarshal(slice, &Hash); err != nil {
-			fmt.Printf("Egopipe input Unmarshal error: %v", err)
-			os.Exit(3)
-		}
-		now := time.Now().UTC()
-
-		go yourPipeCode(Hash, c) // stage 2
-
-		// return pointer to internal map
-        // if channel not returned will block here
-        //
-		pstg2map := <-c 
-
-		go output(client, p, pstg2map, r) // stage 3
-		resp := <-r
-
-		log.Println("response from output", resp.Message, resp.Error)
-		if resp.Error != nil {
-			os.Exit(3)
-		}
-
-		totals.Elapsed = time.Since(now)
-		totals.Docs++
-		totals.Bytes += len(resp.Message)
-		(totals.Fields)[len(*pstg2map)]++
-
-		log.Println("metrics:", totals)
 	}
+	log.Printf("Pipe exit.")
 
 }
-

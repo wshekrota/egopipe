@@ -18,8 +18,7 @@ func TestOutput(t *testing.T) {
 	go output(client, p, &m, r)
 	got := <-r
 	if got.Error != nil {
-	   fmt.Println(got.Error)
+		fmt.Println(got.Error)
 	}
-	   fmt.Println(got.Message)
+	fmt.Println(got.Message)
 }
-
