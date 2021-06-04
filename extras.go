@@ -1,12 +1,13 @@
 package main
 
-//import "log"
 import "strings"
 import "regexp"
 
 /*
+
   Tools for use in transform stage.
   Thinking about grok, patterns and ECS in future.
+
 */
 
 // grok - based on %{syntax:semantic} format
@@ -23,13 +24,13 @@ func grok(map_ptr *map[string]interface{}, pattern string) bool {
 	}
 	reg := regexp.MustCompile(syntaxes)
 	results := reg.FindString((*map_ptr)["message"].(string))
-	res := strings.Split(results," ")
+	res := strings.Split(results, " ")
 	for j := 0; j < len(res)-1; j++ {
 		if semantics[j] != "" {
 			(*map_ptr)[semantics[j]] = res[j]
 		}
 	}
-	return true
+	return len(results) > 0
 
 }
 
@@ -38,10 +39,15 @@ func grok(map_ptr *map[string]interface{}, pattern string) bool {
 func oniguruma(newfield string, field string, map_ptr *map[string]interface{}, regx string) bool {
 
 	if _, ok := (*map_ptr)[field]; ok {
-		reg := regexp.MustCompile(regx)
-		(*map_ptr)[newfield] = string(reg.Find([]byte(dotField(*map_ptr, field).(string))))
+		reg, err := regexp.Compile(regx)
+		if err != nil {
+			return false
+		}
+		resp := reg.FindStringSubmatch((*map_ptr)[field].(string))[1]
+		(*map_ptr)[newfield] = string(resp)
 		return true
 	} else {
+		// Search field did not exist
 		return false
 	}
 
@@ -58,6 +64,7 @@ func addTags(doc *map[string]interface{}, s []string) {
 	}
 }
 
+// Legacy fields with '.'
 // dotField - If not "log.file.path": value then breakout map names with '.' in them to their component.
 // ie 'log.file.path' is map["log":map["file":map["path":string]]] or a string
 func dotField(h map[string]interface{}, a string) interface{} {
