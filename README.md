@@ -306,7 +306,17 @@ true/false so that you can selectively warn of failure.
 
 and 
 
-[gitlab process auditing](https://github.com/wshekrota/gitlab
+### Gitlab
+```
+Does your group have needs for gitlab auditing capabities? Use egopipe to build a realtime
+database to answer all your hard questions about what happened in gitlab. Part A simply
+identifies CRUD operations for you. Build with that and find all create/delete/clone/push ops.
+Go a step further and fund my propsal in part B and get custom information about code change.
+```
+
+[gitlab part A 'CRUD' auditing](https://gitlab.com/penguinacity/gitlab_usecase_a.git
+
+[gitlab partB proposal](https://gitlab.com/penguinacity/gitlab_usecase_b.git
 
 ---
 
